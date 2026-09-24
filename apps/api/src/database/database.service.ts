@@ -28,7 +28,7 @@ import { PrismaClient, Prisma } from '@prisma/client';
 export class DatabaseService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(DatabaseService.name);
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(configService: ConfigService) {
     const nodeEnv = configService.get<string>('app.nodeEnv', 'development');
     const poolMax = configService.get<number>('database.pool.max', 10);
     const connectionTimeout = configService.get<number>('database.pool.connectionTimeout', 30000);

@@ -21,14 +21,14 @@ import {
   IsBoolean,
 } from 'class-validator';
 import { Exclude, Expose, Type } from 'class-transformer';
-import { ApiProperty, ApiPropertyOptional, PartialType, OmitType } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   UserRole,
   UserStatus,
   ProgrammingLanguage,
   PROGRAMMING_LANGUAGES,
   ProficiencyLevel,
-} from '../../domain/types/domain.types';
+} from '../../../domain/types/domain.types';
 
 // ─────────────────────────────────────────────────────────────
 //  REQUEST DTOs (Entrada del cliente)

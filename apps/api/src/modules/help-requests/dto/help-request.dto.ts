@@ -15,7 +15,6 @@ import {
   MaxLength,
   Min,
   MinLength,
-  ValidateIf,
 } from 'class-validator';
 import { Exclude, Expose, Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -26,9 +25,9 @@ import {
   HELP_REQUEST_STATUSES,
   PROGRAMMING_LANGUAGES,
   ProgrammingLanguage,
-} from '../../domain/types/domain.types';
-import { UserResponseDto } from '../../modules/users/dto/user.dto';
-import { SkillResponseDto } from '../../modules/users/dto/skill.dto';
+} from '../../../domain/types/domain.types';
+import { UserResponseDto } from '../../users/dto/user.dto';
+import { SkillResponseDto } from '../../users/dto/skill.dto';
 
 // ─── Request DTOs ─────────────────────────────────────────────
 

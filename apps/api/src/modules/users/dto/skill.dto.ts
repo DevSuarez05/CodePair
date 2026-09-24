@@ -4,9 +4,9 @@
  */
 
 import { IsBoolean, IsEnum, IsInt, IsOptional, IsString, IsUrl, Max, MaxLength, Min, MinLength } from 'class-validator';
-import { Exclude, Expose, Type } from 'class-transformer';
+import { Exclude, Expose } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { SKILL_CATEGORIES, SkillCategory, ProficiencyLevel } from '../../domain/types/domain.types';
+import { SKILL_CATEGORIES, SkillCategory, ProficiencyLevel } from '../../../domain/types/domain.types';
 
 // ─── Request DTOs ─────────────────────────────────────────────
 

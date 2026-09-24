@@ -15,7 +15,7 @@ import { DatabaseService } from '../../../database/database.service';
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   constructor(
-    private readonly config: ConfigService,
+    config: ConfigService,
     private readonly db: DatabaseService,
   ) {
     super({

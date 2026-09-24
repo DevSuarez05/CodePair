@@ -1,27 +1,22 @@
 import { Injectable } from '@nestjs/common';
-import { HealthIndicator, HealthIndicatorResult, HealthCheckError } from '@nestjs/terminus';
 import { DatabaseService } from './database.service';
 
 /**
  * @class DatabaseHealthIndicator
  *
- * NestJS Terminus health indicator for the MySQL/Prisma connection.
- * Registered in the HealthModule and exposed at GET /api/v1/health.
+ * Health indicator for the MySQL/Prisma connection.
  */
 @Injectable()
-export class DatabaseHealthIndicator extends HealthIndicator {
-  constructor(private readonly db: DatabaseService) {
-    super();
-  }
+export class DatabaseHealthIndicator {
+  constructor(private readonly db: DatabaseService) {}
 
-  async isHealthy(key: string = 'database'): Promise<HealthIndicatorResult> {
+  async isHealthy(key: string = 'database'): Promise<Record<string, { status: string; timestamp: string }>> {
     const isConnected = await this.db.isHealthy();
-    const result = this.getStatus(key, isConnected);
-
-    if (!isConnected) {
-      throw new HealthCheckError('Database connection failed', result);
-    }
-
-    return result;
+    return {
+      [key]: {
+        status: isConnected ? 'up' : 'down',
+        timestamp: new Date().toISOString(),
+      },
+    };
   }
 }

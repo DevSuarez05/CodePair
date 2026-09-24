@@ -20,9 +20,9 @@ import {
 } from 'class-validator';
 import { Exclude, Expose, Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { FeedbackRating } from '../../domain/types/domain.types';
-import { UserResponseDto } from '../../modules/users/dto/user.dto';
-import { SessionResponseDto } from '../../modules/sessions/dto/session.dto';
+import { FeedbackRating } from '../../../domain/types/domain.types';
+import { UserResponseDto } from '../../users/dto/user.dto';
+import { SessionResponseDto } from '../../sessions/dto/session.dto';
 
 // ─── Request DTOs ─────────────────────────────────────────────
 

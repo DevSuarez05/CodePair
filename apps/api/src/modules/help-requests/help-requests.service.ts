@@ -127,9 +127,7 @@ export class HelpRequestsService {
     const skip = (page - 1) * limit;
 
     // Construir where dinámicamente
-    const where: Prisma.HelpRequestWhereInput = {
-      deletedAt: undefined, // No existe soft-delete en requests, pero preparado
-    };
+    const where: Prisma.HelpRequestWhereInput = {};
 
     // Filtros opcionales
     if (status)   where.status   = status;

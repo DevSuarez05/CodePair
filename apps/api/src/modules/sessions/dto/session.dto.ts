@@ -21,8 +21,8 @@ import {
   PROGRAMMING_LANGUAGES,
   SessionStatus,
   SESSION_STATUSES,
-} from '../../domain/types/domain.types';
-import { UserResponseDto } from '../../modules/users/dto/user.dto';
+} from '../../../domain/types/domain.types';
+import { UserResponseDto } from '../../users/dto/user.dto';
 
 // ─── Request DTOs ─────────────────────────────────────────────
 
