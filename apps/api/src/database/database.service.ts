@@ -37,11 +37,27 @@ export class DatabaseService extends PrismaClient implements OnModuleInit, OnMod
     const clientOptions: Prisma.PrismaClientOptions = {
       // Inject pool settings into the connection URL at runtime
       datasourceUrl: (() => {
-        const url = new URL(configService.get<string>('database.url', ''));
-        url.searchParams.set('connection_limit', String(poolMax));
-        url.searchParams.set('connect_timeout', String(Math.floor(connectionTimeout / 1000)));
-        url.searchParams.set('pool_timeout', String(Math.floor(connectionTimeout / 1000)));
-        return url.toString();
+        const rawUrl =
+          configService.get<string>('database.url') ||
+          process.env.DATABASE_URL ||
+          '';
+
+        if (!rawUrl || !rawUrl.trim()) {
+          const fallback = 'mysql://root:root@localhost:3306/codepair_db';
+          return `${fallback}?connection_limit=${poolMax}&connect_timeout=${Math.floor(
+            connectionTimeout / 1000,
+          )}&pool_timeout=${Math.floor(connectionTimeout / 1000)}`;
+        }
+
+        try {
+          const url = new URL(rawUrl);
+          url.searchParams.set('connection_limit', String(poolMax));
+          url.searchParams.set('connect_timeout', String(Math.floor(connectionTimeout / 1000)));
+          url.searchParams.set('pool_timeout', String(Math.floor(connectionTimeout / 1000)));
+          return url.toString();
+        } catch {
+          return rawUrl;
+        }
       })(),
 
       // ── Query Logging ───────────────────────────────────────
@@ -85,9 +101,12 @@ export class DatabaseService extends PrismaClient implements OnModuleInit, OnMod
       await this.$connect();
       this.logger.log('✅ Database connection established successfully.');
     } catch (error) {
-      this.logger.error('❌ Failed to connect to database:', error);
-      // Propagate — NestJS will handle module init failure
-      throw error;
+      this.logger.error('❌ Failed to connect to MySQL database:', error);
+      if (process.env.NODE_ENV === 'production') {
+        throw error;
+      } else {
+        this.logger.warn('⚠️ MySQL no está disponible de inmediato. Iniciando servidor en modo desarrollo.');
+      }
     }
   }
 

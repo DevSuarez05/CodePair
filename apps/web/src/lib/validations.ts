@@ -25,6 +25,19 @@ export type ProficiencyLevelKey = (typeof PROFICIENCY_LEVELS)[number];
 export const HELP_REQUEST_PRIORITIES = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'] as const;
 export const HELP_REQUEST_STATUSES = ['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CANCELLED', 'EXPIRED'] as const;
 
+export const USER_APP_ROLES = ['APRENDIZ', 'MENTOR'] as const;
+export type UserAppRole = (typeof USER_APP_ROLES)[number];
+
+export const USER_LANGUAGES_LIST = [
+  { code: 'ES', label: 'Español (ES)', flag: '🇪🇸' },
+  { code: 'EN', label: 'English (EN)', flag: '🇺🇸' },
+  { code: 'PT', label: 'Português (PT)', flag: '🇧🇷' },
+] as const;
+
+// RFC 5322 standard email regex
+export const RFC_5322_EMAIL_REGEX =
+  /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
+
 // ─── HU-01: Registro & Configuración de Perfil ────────────────
 
 export const skillSelectionItemSchema = z.object({
@@ -37,33 +50,42 @@ export const skillSelectionItemSchema = z.object({
 
 export const registerFormSchema = z
   .object({
-    displayName: z
+    name: z
       .string({ required_error: 'El nombre completo es requerido' })
-      .min(2, 'El nombre debe tener al menos 2 caracteres')
+      .trim()
+      .min(3, 'El nombre debe tener al menos 3 caracteres')
       .max(100, 'El nombre no puede superar los 100 caracteres'),
     username: z
-      .string({ required_error: 'El nombre de usuario es requerido' })
+      .string()
+      .trim()
       .min(3, 'El username debe tener al menos 3 caracteres')
       .max(50, 'El username no puede superar los 50 caracteres')
-      .regex(/^[a-z0-9_-]+$/, 'Solo minúsculas, números, guiones y guiones bajos'),
+      .regex(/^[a-z0-9_-]+$/, 'Solo minúsculas, números, guiones y guiones bajos')
+      .optional()
+      .or(z.literal('')),
     email: z
       .string({ required_error: 'El correo electrónico es requerido' })
       .email('Ingresa un correo electrónico válido')
+      .regex(RFC_5322_EMAIL_REGEX, 'El correo debe cumplir con el formato RFC 5322')
       .max(255),
     password: z
       .string({ required_error: 'La contraseña es requerida' })
       .min(8, 'Debe tener al menos 8 caracteres')
       .regex(/[A-Z]/, 'Debe incluir al menos una letra mayúscula')
-      .regex(/[a-z]/, 'Debe incluir al menos una letra minúscula')
       .regex(/[0-9]/, 'Debe incluir al menos un número')
       .regex(/[^a-zA-Z0-9]/, 'Debe incluir al menos un carácter especial (@$!%*?&)'),
     confirmPassword: z.string({ required_error: 'Confirma tu contraseña' }),
-    timezone: z.string().default('UTC'),
+    role: z.enum(['APRENDIZ', 'MENTOR'], {
+      required_error: 'Selecciona si deseas aprender o enseñar',
+    }),
+    timezone: z.string().min(1, 'Selecciona una zona horaria').default('UTC-5'),
+    language: z.enum(['ES', 'EN', 'PT']).default('ES'),
     preferredLanguage: z.enum(PROGRAMMING_LANGUAGES).default('TYPESCRIPT'),
+    bio: z.string().max(500, 'Máximo 500 caracteres').optional().or(z.literal('')),
     skills: z
       .array(skillSelectionItemSchema)
-      .min(1, 'Debes seleccionar al menos una habilidad técnica')
-      .max(20, 'Puedes añadir hasta 20 habilidades'),
+      .max(20, 'Puedes añadir hasta 20 habilidades')
+      .default([]),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: 'Las contraseñas no coinciden',

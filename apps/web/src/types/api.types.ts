@@ -9,11 +9,20 @@
 // ─── Enums (como const objects para tree-shaking) ─────────────
 
 export const UserRole = {
-  STUDENT: 'STUDENT',
-  MENTOR:  'MENTOR',
-  ADMIN:   'ADMIN',
+  APRENDIZ:      'APRENDIZ',
+  MENTOR:        'MENTOR',
+  ADMINISTRADOR: 'ADMINISTRADOR',
+  STUDENT:       'STUDENT',
+  ADMIN:         'ADMIN',
 } as const;
 export type UserRole = (typeof UserRole)[keyof typeof UserRole];
+
+export const UserLanguage = {
+  ES: 'ES',
+  EN: 'EN',
+  PT: 'PT',
+} as const;
+export type UserLanguage = (typeof UserLanguage)[keyof typeof UserLanguage];
 
 export const UserStatus = {
   ACTIVE:               'ACTIVE',
@@ -67,6 +76,7 @@ export const ProgrammingLanguage = {
 } as const;
 export type ProgrammingLanguage = (typeof ProgrammingLanguage)[keyof typeof ProgrammingLanguage];
 
+export type ProficiencyLevelKey = 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
 export type ProficiencyLevel = 1 | 2 | 3 | 4 | 5;
 export type FeedbackRating   = 1 | 2 | 3 | 4 | 5;
 
@@ -74,6 +84,7 @@ export type FeedbackRating   = 1 | 2 | 3 | 4 | 5;
 
 export interface User {
   id: string;
+  name?: string;
   email: string;
   username: string;
   displayName: string;
@@ -84,6 +95,7 @@ export interface User {
   role: UserRole;
   status: UserStatus;
   isEmailVerified: boolean;
+  language?: UserLanguage;
   preferredLanguage: ProgrammingLanguage;
   timezone: string;
   lastLoginAt: string | null;   // ISO string desde la API
@@ -104,6 +116,7 @@ export interface Skill {
 export interface UserSkill {
   skillId: string;
   proficiency: ProficiencyLevel;
+  proficiencyLevel?: ProficiencyLevelKey;
   yearsOfExperience: number | null;
   canMentor: boolean;
   createdAt: string;

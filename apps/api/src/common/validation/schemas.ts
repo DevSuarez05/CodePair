@@ -20,50 +20,75 @@ export const PROFICIENCY_MAP: Record<string, number> = {
   ADVANCED:     5,
 };
 
+export const USER_LANGUAGES = ['ES', 'EN', 'PT'] as const;
+
+// RFC 5322 official standard email regex
+const RFC_5322_EMAIL_REGEX =
+  /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
+
 // ─── Auth Schemas ─────────────────────────────────────────────
 
 export const registerSchema = z.object({
+  name: z
+    .string({ required_error: 'El nombre completo es requerido' })
+    .trim()
+    .min(3, 'El nombre debe tener al menos 3 caracteres')
+    .max(100, 'El nombre no puede exceder los 100 caracteres'),
   displayName: z
-    .string({ required_error: 'Display name is required' })
+    .string()
+    .trim()
     .min(2, 'Display name must be at least 2 characters')
-    .max(100),
+    .max(100)
+    .optional(),
   username: z
-    .string({ required_error: 'Username is required' })
-    .min(3, 'Username must be at least 3 characters')
+    .string()
+    .min(3, 'El nombre de usuario debe tener al menos 3 caracteres')
     .max(50)
-    .regex(/^[a-z0-9_-]+$/, 'Username can only contain lowercase letters, numbers, _ and -'),
+    .regex(/^[a-z0-9_-]+$/, 'Username can only contain lowercase letters, numbers, _ and -')
+    .optional(),
   email: z
-    .string({ required_error: 'Email is required' })
-    .email('Must be a valid email address')
+    .string({ required_error: 'El correo electrónico es requerido' })
+    .email('Formato de correo electrónico inválido')
+    .regex(RFC_5322_EMAIL_REGEX, 'El correo debe cumplir con el estándar RFC 5322')
     .max(255),
   password: z
-    .string({ required_error: 'Password is required' })
-    .min(8, 'Password must be at least 8 characters')
-    .max(128)
-    .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
-    .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
-    .regex(/[0-9]/, 'Password must contain at least one number')
-    .regex(/[^a-zA-Z0-9]/, 'Password must contain at least one special character'),
+    .string({ required_error: 'La contraseña es requerida' })
+    .min(8, 'La contraseña debe tener al menos 8 caracteres')
+    .max(128, 'La contraseña no puede exceder 128 caracteres')
+    .regex(/[A-Z]/, 'La contraseña debe contener al menos una letra mayúscula')
+    .regex(/[0-9]/, 'La contraseña debe contener al menos un número')
+    .regex(/[^a-zA-Z0-9]/, 'La contraseña debe contener al menos un carácter especial (@$!%*?&)'),
+  role: z.enum(['APRENDIZ', 'MENTOR'], {
+    errorMap: () => ({ message: 'El rol debe ser APRENDIZ o MENTOR (ADMINISTRADOR no es autoasignable)' }),
+  }),
   timezone: z
     .string()
     .max(50)
     .optional()
-    .default('UTC'),
-  preferredLanguage: z
-    .enum(PROGRAMMING_LANGUAGES, { errorMap: () => ({ message: 'Invalid programming language' }) })
+    .default('UTC-5'),
+  language: z
+    .enum(USER_LANGUAGES, { errorMap: () => ({ message: 'El idioma debe ser ES, EN o PT' }) })
     .optional()
-    .default('JAVASCRIPT'),
+    .default('ES'),
+  preferredLanguage: z
+    .enum(PROGRAMMING_LANGUAGES, { errorMap: () => ({ message: 'Lenguaje de programación inválido' }) })
+    .optional()
+    .default('TYPESCRIPT'),
+  bio: z
+    .string()
+    .max(1000, 'La biografía no puede exceder los 1,000 caracteres')
+    .optional(),
   // Habilidades técnicas con nivel BEGINNER/INTERMEDIATE/ADVANCED
   skills: z
     .array(
       z.object({
-        skillId: z.string().uuid('Each skillId must be a valid UUID'),
+        skillId: z.union([z.string().min(1), z.number()]).transform((val) => String(val)),
         level: z.enum(PROFICIENCY_LEVELS, {
-          errorMap: () => ({ message: 'Level must be BEGINNER, INTERMEDIATE, or ADVANCED' }),
+          errorMap: () => ({ message: 'El nivel debe ser BEGINNER, INTERMEDIATE o ADVANCED' }),
         }),
       }),
     )
-    .max(20, 'Cannot register more than 20 skills')
+    .max(20, 'No puedes registrar más de 20 habilidades')
     .optional()
     .default([]),
 });

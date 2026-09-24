@@ -21,13 +21,16 @@ import {
 
 export interface AuthUserResponse {
   id: string;
+  name: string;
   email: string;
   username: string;
   displayName: string;
   avatarUrl: string | null;
+  bio: string | null;
   role: string;
   status: string;
   isEmailVerified: boolean;
+  language: string;
   preferredLanguage: string;
   timezone: string;
   createdAt: Date;
@@ -59,20 +62,32 @@ export class AuthService {
   // ──────────────────────────────────────────────────────────────
 
   async register(input: RegisterInput, res: Response): Promise<AuthResponse> {
-    // 1. Verificar unicidad de email y username
+    // 1. Resolver username único si no se envió explícitamente
+    const rawUsername = (input.username || input.email.split('@')[0] || 'dev')
+      .toLowerCase()
+      .replace(/[^a-z0-9_-]/g, '_')
+      .substring(0, 35);
+
+    // 2. Verificar unicidad de email y username
     const [emailExists, usernameExists] = await Promise.all([
-      this.db.user.findUnique({ where: { email: input.email }, select: { id: true } }),
-      this.db.user.findUnique({ where: { username: input.username }, select: { id: true } }),
+      this.db.user.findUnique({ where: { email: input.email.toLowerCase().trim() }, select: { id: true } }),
+      this.db.user.findUnique({ where: { username: rawUsername }, select: { id: true } }),
     ]);
 
     if (emailExists) {
-      throw new ConflictException('An account with this email already exists.');
-    }
-    if (usernameExists) {
-      throw new ConflictException('This username is already taken.');
+      throw new ConflictException('Ya existe una cuenta registrada con este correo electrónico institucional.');
     }
 
-    // 2. Validar que todos los skillIds existan (si se proveyeron)
+    const finalUsername = usernameExists
+      ? `${rawUsername}_${Math.random().toString(36).substring(2, 6)}`
+      : rawUsername;
+
+    // 3. Proteger autoasignación de rol ADMINISTRADOR
+    if ((input.role as string) === 'ADMINISTRADOR' || (input.role as string) === 'ADMIN') {
+      throw new BadRequestException('El rol de ADMINISTRADOR no puede ser autoasignado públicamente.');
+    }
+
+    // 4. Validar que los skillIds existan si se proporcionaron (filtrar o verificar)
     if (input.skills.length > 0) {
       const skillIds = input.skills.map((s) => s.skillId);
       const foundSkills = await this.db.skill.findMany({
@@ -83,44 +98,46 @@ export class AuthService {
       const foundIds = new Set(foundSkills.map((s) => s.id));
       const invalidIds = skillIds.filter((id) => !foundIds.has(id));
       if (invalidIds.length > 0) {
-        throw new BadRequestException(
-          `The following skill IDs are invalid or inactive: ${invalidIds.join(', ')}`,
-        );
+        this.logger.warn(`Skills omitidas por no existir en catálogo: ${invalidIds.join(', ')}`);
       }
     }
 
-    // 3. Hashear contraseña con Argon2
+    // 5. Hashear contraseña con Argon2 (o factor de costo equivalente a bcrypt >= 10)
     const passwordHash = await argon2.hash(input.password, {
       memoryCost: this.config.get<number>('auth.argon2.memoryCost', 65536),
       timeCost:   this.config.get<number>('auth.argon2.timeCost', 3),
       parallelism: this.config.get<number>('auth.argon2.parallelism', 4),
     });
 
-    // 4. Crear usuario + skills en una sola transacción
+    // 6. Crear usuario + user_skills en una transacción atómica
     const user = await this.db.transaction(async (tx) => {
       const createdUser = await tx.user.create({
         data: {
-          email:             input.email,
-          username:          input.username,
-          displayName:       input.displayName,
+          name:              input.name,
+          displayName:       input.displayName || input.name,
+          username:          finalUsername,
+          email:             input.email.toLowerCase().trim(),
           passwordHash,
-          timezone:          input.timezone,
-          preferredLanguage: input.preferredLanguage,
-          role:              'STUDENT',
-          status:            'ACTIVE',    // simplificado (sin email verification en este flujo)
+          timezone:          input.timezone || 'UTC-5',
+          language:          (input.language || 'ES') as any,
+          preferredLanguage: (input.preferredLanguage || 'TYPESCRIPT') as any,
+          role:              input.role as any,
+          bio:               input.bio ?? null,
+          status:            'ACTIVE',
           isEmailVerified:   false,
         },
         select: userSelectFields,
       });
 
-      // Insertar skills si se proveyeron
+      // Insertar relaciones de habilidades técnicas seleccionadas
       if (input.skills.length > 0) {
         await tx.userSkill.createMany({
           data: input.skills.map((s) => ({
-            userId:      createdUser.id,
-            skillId:     s.skillId,
-            proficiency: PROFICIENCY_MAP[s.level] ?? 1,
-            canMentor:   s.level === 'ADVANCED',
+            userId:           createdUser.id,
+            skillId:          s.skillId,
+            proficiency:      PROFICIENCY_MAP[s.level] ?? 1,
+            proficiencyLevel: s.level as any,
+            canMentor:        input.role === 'MENTOR' || s.level === 'ADVANCED',
           })),
           skipDuplicates: true,
         });
@@ -129,12 +146,13 @@ export class AuthService {
       return createdUser;
     });
 
-    this.logger.log(`New user registered: ${user.email}`);
+    this.logger.log(`Nuevo usuario registrado exitosamente: ${user.email} con rol [${user.role}]`);
 
-    // 5. Generar tokens y fijar cookies
+    // 7. Generar tokens JWT y asignar cookies seguras HttpOnly
     const tokenPair = await this.generateTokens(user.id, user.email, user.role, false);
     this.setAuthCookies(res, tokenPair.accessToken, tokenPair.refreshToken, false);
 
+    // 8. Respuesta sanitizada (sin passwordHash)
     return {
       user: user as AuthUserResponse,
       accessToken: tokenPair.accessToken,
@@ -333,15 +351,18 @@ export class AuthService {
 // ─── Select Fields ─────────────────────────────────────────────
 
 const userSelectFields = {
-  id:               true,
-  email:            true,
-  username:         true,
-  displayName:      true,
-  avatarUrl:        true,
-  role:             true,
-  status:           true,
-  isEmailVerified:  true,
+  id:                true,
+  name:              true,
+  email:             true,
+  username:          true,
+  displayName:       true,
+  avatarUrl:         true,
+  bio:               true,
+  role:              true,
+  status:            true,
+  isEmailVerified:   true,
+  language:          true,
   preferredLanguage: true,
-  timezone:         true,
-  createdAt:        true,
+  timezone:          true,
+  createdAt:         true,
 } as const;

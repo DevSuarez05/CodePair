@@ -11,8 +11,17 @@
 //  ENUMERATIONS
 // ─────────────────────────────────────────────────────────────
 
-export const USER_ROLES = ['STUDENT', 'MENTOR', 'ADMIN'] as const;
+export const USER_ROLES = [
+  'APRENDIZ',
+  'MENTOR',
+  'ADMINISTRADOR',
+  'STUDENT',
+  'ADMIN',
+] as const;
 export type UserRole = (typeof USER_ROLES)[number];
+
+export const USER_LANGUAGES = ['ES', 'EN', 'PT'] as const;
+export type UserLanguage = (typeof USER_LANGUAGES)[number];
 
 export const USER_STATUSES = ['ACTIVE', 'INACTIVE', 'BANNED', 'PENDING_VERIFICATION'] as const;
 export type UserStatus = (typeof USER_STATUSES)[number];
@@ -40,8 +49,11 @@ export const SKILL_CATEGORIES = [
 ] as const;
 export type SkillCategory = (typeof SKILL_CATEGORIES)[number];
 
+export const SKILL_PROFICIENCY_LEVELS = ['BEGINNER', 'INTERMEDIATE', 'ADVANCED'] as const;
+export type SkillProficiencyLevel = (typeof SKILL_PROFICIENCY_LEVELS)[number];
+
 /**
- * Nivel de proficiencia (1–5).
+ * Nivel de proficiencia numérico (1–5) para compatibilidad interna.
  * 1 = Beginner, 2 = Basic, 3 = Intermediate, 4 = Advanced, 5 = Expert
  */
 export type ProficiencyLevel = 1 | 2 | 3 | 4 | 5;
@@ -58,6 +70,7 @@ export type FeedbackRating = 1 | 2 | 3 | 4 | 5;
 /** Entidad de usuario completa (incluye campos privados — uso interno) */
 export interface User {
   id: string;
+  name: string;
   email: string;
   username: string;
   displayName: string;
@@ -67,6 +80,7 @@ export interface User {
   githubUrl: string | null;
   linkedinUrl: string | null;
   timezone: string;
+  language: UserLanguage;
   preferredLanguage: ProgrammingLanguage;
   role: UserRole;
   status: UserStatus;
@@ -83,11 +97,13 @@ export interface User {
 /** Vista pública de usuario (sin campos sensibles) */
 export interface PublicUser {
   id: string;
+  name: string;
   username: string;
   displayName: string;
   avatarUrl: string | null;
   bio: string | null;
   githubUrl: string | null;
+  language: UserLanguage;
   role: UserRole;
   preferredLanguage: ProgrammingLanguage;
   createdAt: Date;
@@ -109,6 +125,7 @@ export interface UserSkill {
   userId: string;
   skillId: string;
   proficiency: ProficiencyLevel;
+  proficiencyLevel?: SkillProficiencyLevel;
   yearsOfExperience: number | null;
   canMentor: boolean;
   createdAt: Date;
