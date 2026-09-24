@@ -111,6 +111,7 @@ export default function HomePage() {
           {/* Navegación por Pestañas Principales */}
           <div className="flex flex-wrap items-center gap-2 pt-2">
             <button
+              id="tab-btn-feed"
               onClick={() => setActiveTab('feed')}
               className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs sm:text-sm font-semibold transition-all ${
                 activeTab === 'feed'
@@ -123,6 +124,7 @@ export default function HomePage() {
             </button>
 
             <button
+              id="tab-btn-register"
               onClick={() => setActiveTab('register')}
               className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs sm:text-sm font-semibold transition-all ${
                 activeTab === 'register'
@@ -135,6 +137,7 @@ export default function HomePage() {
             </button>
 
             <button
+              id="tab-btn-new-request"
               onClick={() => setActiveTab('new-request')}
               className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs sm:text-sm font-semibold transition-all ${
                 activeTab === 'new-request'
@@ -146,70 +149,140 @@ export default function HomePage() {
               <span>Pedir Ayuda (HU-02)</span>
             </button>
 
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                // Abrir directamente modal de demostración Jitsi HU-04
-                setSelectedSession({
-                  id: 'demo-session',
-                  requestId: 'req-001',
-                  hostId: 'host-1',
-                  participantId: 'part-1',
-                  title: 'Resolución de Deadlocks en Prisma Client con MySQL',
-                  description: 'Sesión activa de demostración',
-                  roomCode: 'DEMO-77',
-                  language: 'TYPESCRIPT',
-                  status: 'ACTIVE',
-                  isPrivate: false,
-                  scheduledAt: new Date().toISOString(),
-                  startedAt: new Date().toISOString(),
-                  endedAt: null,
-                  durationSeconds: null,
-                  createdAt: new Date().toISOString(),
-                  updatedAt: new Date().toISOString(),
-                  host: {
-                    id: 'host-1',
-                    displayName: 'Alejandro Morales',
-                    username: 'alex_morales',
-                    email: 'alex@codepair.dev',
-                    avatarUrl: null,
-                    bio: null,
-                    githubUrl: null,
-                    linkedinUrl: null,
-                    role: 'STUDENT',
+            <div className="flex items-center gap-2 ml-auto">
+              <Button
+                id="btn-demo-jitsi"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  // Abrir directamente modal de demostración Jitsi HU-04
+                  const demoSess: Session = {
+                    id: 'demo-session',
+                    requestId: 'req-001',
+                    hostId: 'host-1',
+                    participantId: 'part-1',
+                    title: 'Resolución de Deadlocks en Prisma Client con MySQL',
+                    description: 'Sesión activa de demostración',
+                    roomCode: 'DEMO-77',
+                    language: 'TYPESCRIPT',
                     status: 'ACTIVE',
-                    isEmailVerified: true,
-                    preferredLanguage: 'TYPESCRIPT',
-                    timezone: 'America/Mexico_City',
-                    lastLoginAt: null,
+                    isPrivate: false,
+                    scheduledAt: new Date().toISOString(),
+                    startedAt: new Date().toISOString(),
+                    endedAt: null,
+                    durationSeconds: null,
                     createdAt: new Date().toISOString(),
-                  },
-                  participant: {
-                    id: 'part-1',
-                    displayName: 'Carlos Vega (Mentor)',
-                    username: 'carlos_mentor',
-                    email: 'carlos@codepair.dev',
-                    avatarUrl: null,
-                    bio: null,
-                    githubUrl: null,
-                    role: 'MENTOR',
-                    status: 'ACTIVE',
-                    isEmailVerified: true,
-                    linkedinUrl: null,
-                    preferredLanguage: 'TYPESCRIPT',
-                    timezone: 'UTC',
-                    lastLoginAt: null,
+                    updatedAt: new Date().toISOString(),
+                    host: {
+                      id: 'host-1',
+                      displayName: 'Alejandro Morales',
+                      username: 'alex_morales',
+                      email: 'alex@codepair.dev',
+                      avatarUrl: null,
+                      bio: null,
+                      githubUrl: null,
+                      linkedinUrl: null,
+                      role: 'STUDENT',
+                      status: 'ACTIVE',
+                      isEmailVerified: true,
+                      preferredLanguage: 'TYPESCRIPT',
+                      timezone: 'America/Mexico_City',
+                      lastLoginAt: null,
+                      createdAt: new Date().toISOString(),
+                    },
+                    participant: {
+                      id: 'part-1',
+                      displayName: 'Carlos Vega (Mentor)',
+                      username: 'carlos_mentor',
+                      email: 'carlos@codepair.dev',
+                      avatarUrl: null,
+                      bio: null,
+                      githubUrl: null,
+                      role: 'MENTOR',
+                      status: 'ACTIVE',
+                      isEmailVerified: true,
+                      linkedinUrl: null,
+                      preferredLanguage: 'TYPESCRIPT',
+                      timezone: 'UTC',
+                      lastLoginAt: null,
+                      createdAt: new Date().toISOString(),
+                    },
+                  };
+                  setSelectedSession(demoSess);
+                  setIsSessionModalOpen(true);
+                }}
+                leftIcon={<Video className="h-3.5 w-3.5 text-cyan-400" />}
+                className="text-xs"
+              >
+                Probar Modal Jitsi (HU-04)
+              </Button>
+
+              <Button
+                id="btn-demo-feedback"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const demoSess: Session = {
+                    id: 'demo-session',
+                    requestId: 'req-001',
+                    hostId: 'host-1',
+                    participantId: 'part-1',
+                    title: 'Resolución de Deadlocks en Prisma Client con MySQL',
+                    description: 'Sesión activa de demostración',
+                    roomCode: 'DEMO-77',
+                    language: 'TYPESCRIPT',
+                    status: 'COMPLETED',
+                    isPrivate: false,
+                    scheduledAt: new Date().toISOString(),
+                    startedAt: new Date().toISOString(),
+                    endedAt: new Date().toISOString(),
+                    durationSeconds: 1800,
                     createdAt: new Date().toISOString(),
-                  },
-                });
-                setIsSessionModalOpen(true);
-              }}
-              leftIcon={<Video className="h-3.5 w-3.5 text-cyan-400" />}
-              className="text-xs ml-auto"
-            >
-              Probar Modal Jitsi (HU-04)
-            </Button>
+                    updatedAt: new Date().toISOString(),
+                    host: {
+                      id: 'host-1',
+                      displayName: 'Alejandro Morales',
+                      username: 'alex_morales',
+                      email: 'alex@codepair.dev',
+                      avatarUrl: null,
+                      bio: null,
+                      githubUrl: null,
+                      linkedinUrl: null,
+                      role: 'STUDENT',
+                      status: 'ACTIVE',
+                      isEmailVerified: true,
+                      preferredLanguage: 'TYPESCRIPT',
+                      timezone: 'America/Mexico_City',
+                      lastLoginAt: null,
+                      createdAt: new Date().toISOString(),
+                    },
+                    participant: {
+                      id: 'part-1',
+                      displayName: 'Carlos Vega (Mentor)',
+                      username: 'carlos_mentor',
+                      email: 'carlos@codepair.dev',
+                      avatarUrl: null,
+                      bio: null,
+                      githubUrl: null,
+                      role: 'MENTOR',
+                      status: 'ACTIVE',
+                      isEmailVerified: true,
+                      linkedinUrl: null,
+                      preferredLanguage: 'TYPESCRIPT',
+                      timezone: 'UTC',
+                      lastLoginAt: null,
+                      createdAt: new Date().toISOString(),
+                    },
+                  };
+                  setFeedbackSession(demoSess);
+                  setIsFeedbackModalOpen(true);
+                }}
+                leftIcon={<Sparkles className="h-3.5 w-3.5 text-amber-400" />}
+                className="text-xs"
+              >
+                Probar Feedback (HU-05)
+              </Button>
+            </div>
           </div>
         </div>
       </section>

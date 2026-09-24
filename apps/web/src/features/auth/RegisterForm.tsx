@@ -71,6 +71,9 @@ export interface RegisterFormProps {
 }
 
 export function RegisterForm({ onSuccess, onNavigateToLogin }: RegisterFormProps) {
+  // Modo de visualización: Registro o Inicio de Sesión
+  const [authMode, setAuthMode] = useState<'register' | 'login'>('register');
+
   // Manejo de paso en el wizard: 1 = Datos de cuenta & Rol, 2 = Preferencias & Habilidades
   const [step, setStep] = useState<1 | 2>(1);
 
@@ -259,51 +262,89 @@ export function RegisterForm({ onSuccess, onNavigateToLogin }: RegisterFormProps
           Plataforma colaborativa de Pair Programming entre pares y mentorías técnicas
         </p>
 
-        {/* Wizard Stepper Progress Bar */}
-        <div className="mt-6 max-w-md mx-auto">
-          <div className="flex items-center justify-between text-xs font-semibold mb-2">
-            <span
-              className={`flex items-center gap-1.5 transition-colors ${
-                step === 1 ? 'text-brand-400' : 'text-emerald-400'
+        {/* Switcher Registro / Iniciar Sesión */}
+        <div className="flex items-center justify-center mt-4">
+          <div className="inline-flex rounded-xl p-1 bg-surface-100 border border-slate-800">
+            <button
+              type="button"
+              id="auth-mode-register-btn"
+              onClick={() => setAuthMode('register')}
+              className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                authMode === 'register'
+                  ? 'bg-brand-600 text-white shadow-md'
+                  : 'text-slate-400 hover:text-white'
               }`}
             >
-              <span
-                className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] ${
-                  step === 1
-                    ? 'bg-brand-500 text-white'
-                    : 'bg-emerald-500 text-white'
-                }`}
-              >
-                {step > 1 ? <Check className="h-3 w-3" /> : '1'}
-              </span>
-              Paso 1: Cuenta y Rol
-            </span>
-
-            <span
-              className={`flex items-center gap-1.5 transition-colors ${
-                step === 2 ? 'text-brand-400' : 'text-slate-500'
+              Registro de Cuenta
+            </button>
+            <button
+              type="button"
+              id="auth-mode-login-btn"
+              onClick={() => setAuthMode('login')}
+              className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                authMode === 'login'
+                  ? 'bg-brand-600 text-white shadow-md'
+                  : 'text-slate-400 hover:text-white'
               }`}
             >
-              <span
-                className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] ${
-                  step === 2
-                    ? 'bg-brand-500 text-white'
-                    : 'bg-slate-800 text-slate-400 border border-slate-700'
-                }`}
-              >
-                2
-              </span>
-              Paso 2: Preferencias y Habilidades
-            </span>
-          </div>
-
-          <div className="h-2 w-full rounded-full bg-surface-100 overflow-hidden border border-slate-800">
-            <div
-              className="h-full bg-gradient-to-r from-brand-500 via-accent-cyan to-brand-400 transition-all duration-300 ease-out"
-              style={{ width: step === 1 ? '50%' : '100%' }}
-            />
+              Iniciar Sesión
+            </button>
           </div>
         </div>
+
+        {/* Wizard Stepper Progress Bar */}
+        {authMode === 'register' && (
+          <div className="mt-6 max-w-md mx-auto">
+            <div className="flex items-center justify-between text-xs font-semibold mb-2">
+              <button
+                type="button"
+                id="stepper-step-1-btn"
+                onClick={() => setStep(1)}
+                className={`flex items-center gap-1.5 transition-colors cursor-pointer ${
+                  step === 1 ? 'text-brand-400' : 'text-emerald-400'
+                }`}
+              >
+                <span
+                  className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] ${
+                    step === 1
+                      ? 'bg-brand-500 text-white'
+                      : 'bg-emerald-500 text-white'
+                  }`}
+                >
+                  {step > 1 ? <Check className="h-3 w-3" /> : '1'}
+                </span>
+                Paso 1: Cuenta y Rol
+              </button>
+
+              <button
+                type="button"
+                id="stepper-step-2-btn"
+                onClick={() => setStep(2)}
+                className={`flex items-center gap-1.5 transition-colors cursor-pointer ${
+                  step === 2 ? 'text-brand-400' : 'text-slate-400'
+                }`}
+              >
+                <span
+                  className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] ${
+                    step === 2
+                      ? 'bg-brand-500 text-white'
+                      : 'bg-slate-800 text-slate-400 border border-slate-700'
+                  }`}
+                >
+                  2
+                </span>
+                Paso 2: Preferencias y Habilidades
+              </button>
+            </div>
+
+            <div className="h-2 w-full rounded-full bg-surface-100 overflow-hidden border border-slate-800">
+              <div
+                className="h-full bg-gradient-to-r from-brand-500 via-accent-cyan to-brand-400 transition-all duration-300 ease-out"
+                style={{ width: step === 1 ? '50%' : '100%' }}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Alerta de error global */}
@@ -330,7 +371,69 @@ export function RegisterForm({ onSuccess, onNavigateToLogin }: RegisterFormProps
         </div>
       )}
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      {authMode === 'login' ? (
+        <div className="space-y-6 max-w-md mx-auto py-4 animate-fade-in">
+          <div className="text-center mb-4">
+            <h2 className="text-lg font-bold text-white">Inicia sesión en tu cuenta</h2>
+            <p className="text-xs text-slate-400 mt-1">Accede a tus sesiones de pair programming y mentorías</p>
+          </div>
+          <div className="space-y-4">
+            <Input
+              label="Correo Institucional o Profesional"
+              type="email"
+              placeholder="tu-correo@codepair.dev"
+              leftIcon={<Mail className="h-4 w-4" />}
+              defaultValue="mentor@codepair.dev"
+            />
+            <Input
+              label="Contraseña"
+              type={showPassword ? 'text' : 'password'}
+              placeholder="••••••••••••"
+              defaultValue="CodePair2026!"
+              leftIcon={<Lock className="h-4 w-4" />}
+              rightIcon={
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="text-slate-400 hover:text-slate-200 cursor-pointer"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              }
+            />
+          </div>
+          <div className="flex items-center justify-between text-xs text-slate-400">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" className="rounded border-slate-700 bg-surface-100" defaultChecked />
+              <span>Recordar mi sesión</span>
+            </label>
+            <a href="#" className="text-brand-400 hover:underline">¿Olvidaste tu contraseña?</a>
+          </div>
+          <Button
+            type="button"
+            variant="glow"
+            size="lg"
+            className="w-full text-sm font-semibold"
+            onClick={() => {
+              toast.success('¡Sesión iniciada con éxito!');
+              onSuccess?.({ username: 'mentor_lead' });
+            }}
+          >
+            Iniciar Sesión en CodePair
+          </Button>
+          <p className="text-center text-xs text-slate-400 pt-2">
+            ¿No tienes cuenta aún?{' '}
+            <button
+              type="button"
+              onClick={() => setAuthMode('register')}
+              className="text-brand-400 hover:text-brand-300 font-semibold underline underline-offset-4 cursor-pointer"
+            >
+              Regístrate gratis
+            </button>
+          </p>
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         {/* ============================================================ */}
         {/* PASO 1: DATOS DE CUENTA Y SELECTOR DE ROL                    */}
         {/* ============================================================ */}
@@ -604,6 +707,58 @@ export function RegisterForm({ onSuccess, onNavigateToLogin }: RegisterFormProps
         {/* ============================================================ */}
         {step === 2 && (
           <div className="space-y-6 animate-fade-in">
+            {/* Selección y Resumen de Rol */}
+            <div className="p-4 rounded-2xl bg-surface-100/90 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-inner">
+              <div>
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                  Rol de Usuario:
+                </span>
+                <div className="flex items-center gap-2 mt-1">
+                  <span
+                    className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${
+                      selectedRole === 'APRENDIZ'
+                        ? 'bg-brand-500/20 text-brand-300 border-brand-500/40'
+                        : 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40'
+                    }`}
+                  >
+                    {selectedRole === 'APRENDIZ' ? '🎓 Aprendiz (Learner)' : '🏆 Mentor (Tutor)'}
+                  </span>
+                  <span className="text-xs text-slate-400">
+                    {selectedRole === 'APRENDIZ'
+                      ? '• Resolver bloqueos de código 1 a 1'
+                      : '• Guiar sesiones de pair programming'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  id="step2-role-aprendiz-btn"
+                  onClick={() => setValue('role', 'APRENDIZ', { shouldValidate: true })}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
+                    selectedRole === 'APRENDIZ'
+                      ? 'bg-brand-600 text-white border-brand-500 shadow-md shadow-brand-500/20'
+                      : 'bg-surface-200 text-slate-400 border-slate-700 hover:text-white'
+                  }`}
+                >
+                  Aprendiz
+                </button>
+                <button
+                  type="button"
+                  id="step2-role-mentor-btn"
+                  onClick={() => setValue('role', 'MENTOR', { shouldValidate: true })}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
+                    selectedRole === 'MENTOR'
+                      ? 'bg-cyan-600 text-white border-cyan-500 shadow-md shadow-cyan-500/20'
+                      : 'bg-surface-200 text-slate-400 border-slate-700 hover:text-white'
+                  }`}
+                >
+                  Mentor
+                </button>
+              </div>
+            </div>
+
             {/* Preferencias de Idioma y Zona Horaria */}
             <div className="space-y-4">
               <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 border-b border-slate-800/80 pb-2">
@@ -847,6 +1002,7 @@ export function RegisterForm({ onSuccess, onNavigateToLogin }: RegisterFormProps
           </div>
         )}
       </form>
-    </div>
-  );
+    )}
+  </div>
+);
 }
