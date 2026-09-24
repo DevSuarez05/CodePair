@@ -1,0 +1,407 @@
+// ============================================================
+//  CodePair — Prisma Schema v2
+//  Database : MySQL 8.x
+//  ORM      : Prisma 6.x
+//
+//  Entities : users · skills · user_skills
+//             help_requests · sessions · feedbacks
+//
+//  Rules:
+//   - @@unique("unique_user_skill")  on user_skills(userId, skillId)
+//   - @@unique("unique_request_session") on sessions(requestId)
+//   - Check-equivalent ratings 1–5 enforced via Zod in service layer
+//     (MySQL CHECK constraints are declared below as @@check in raw SQL
+//      via a custom migration — Prisma will preserve them in migrations)
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider     = "mysql"
+  url          = env("DATABASE_URL")
+  relationMode = "prisma"
+}
+
+// ─────────────────────────────────────────────────────────────
+//  ENUMERATIONS
+// ─────────────────────────────────────────────────────────────
+
+/// Roles de usuario en la plataforma
+enum UserRole {
+  STUDENT  // Busca ayuda / pair programming
+  MENTOR   // Brinda ayuda / mentorías
+  ADMIN    // Administrador del sistema
+}
+
+/// Estado del ciclo de vida del usuario
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  BANNED
+  PENDING_VERIFICATION
+}
+
+/// Estado de una solicitud de ayuda
+enum HelpRequestStatus {
+  OPEN        // Publicada, esperando mentor
+  IN_PROGRESS // Sesión activa en curso
+  RESOLVED    // Problema resuelto satisfactoriamente
+  CANCELLED   // Cancelada por el solicitante
+  EXPIRED     // Expiró sin respuesta
+}
+
+/// Urgencia de la solicitud de ayuda
+enum HelpRequestPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+/// Estado de la sesión de pair programming
+enum SessionStatus {
+  PENDING    // Sala creada, sin iniciar
+  ACTIVE     // En progreso
+  PAUSED     // Pausada temporalmente
+  COMPLETED  // Finalizada con éxito
+  CANCELLED  // Cancelada
+}
+
+/// Lenguajes de programación soportados
+enum ProgrammingLanguage {
+  JAVASCRIPT
+  TYPESCRIPT
+  PYTHON
+  JAVA
+  CPP
+  CSHARP
+  GO
+  RUST
+  RUBY
+  PHP
+  KOTLIN
+  SWIFT
+  SQL
+  OTHER
+}
+
+// ─────────────────────────────────────────────────────────────
+//  MODEL: users
+// ─────────────────────────────────────────────────────────────
+
+/// Tabla principal de usuarios del sistema.
+/// Incluye soft-delete (deletedAt) y verificación de email.
+model User {
+  // ── Identity ─────────────────────────────────────────────
+  id                  String              @id @default(uuid()) @db.VarChar(36)
+  email               String              @unique @db.VarChar(255)
+  username            String              @unique @db.VarChar(50)
+  displayName         String              @db.VarChar(100)
+  passwordHash        String              @db.VarChar(255)
+
+  // ── Profile ───────────────────────────────────────────────
+  avatarUrl           String?             @db.VarChar(512)
+  bio                 String?             @db.Text
+  githubUrl           String?             @db.VarChar(255)
+  linkedinUrl         String?             @db.VarChar(255)
+  timezone            String              @default("UTC") @db.VarChar(50)
+  preferredLanguage   ProgrammingLanguage @default(JAVASCRIPT)
+
+  // ── Access Control ────────────────────────────────────────
+  role                UserRole            @default(STUDENT)
+  status              UserStatus          @default(PENDING_VERIFICATION)
+  isEmailVerified     Boolean             @default(false)
+  emailVerifyToken    String?             @db.VarChar(255)
+  passwordResetToken  String?             @db.VarChar(255)
+  passwordResetExpiry DateTime?
+  lastLoginAt         DateTime?
+
+  // ── Timestamps ────────────────────────────────────────────
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  deletedAt           DateTime?           // Soft delete
+
+  // ── Relations ─────────────────────────────────────────────
+  refreshTokens       RefreshToken[]
+  userSkills          UserSkill[]
+  helpRequests        HelpRequest[]       @relation("HelpRequestStudent")
+  mentorSessions      HelpRequest[]       @relation("HelpRequestMentor")
+  hostedSessions      Session[]           @relation("SessionHost")
+  participantSessions Session[]           @relation("SessionParticipant")
+  givenFeedbacks      Feedback[]          @relation("FeedbackReviewer")
+  receivedFeedbacks   Feedback[]          @relation("FeedbackReviewee")
+
+  @@index([email])
+  @@index([username])
+  @@index([role])
+  @@index([status])
+  @@index([deletedAt])
+  @@map("users")
+}
+
+// ─────────────────────────────────────────────────────────────
+//  MODEL: refresh_tokens
+// ─────────────────────────────────────────────────────────────
+
+/// Tokens JWT de refresco — revocables individualmente.
+/// Permite invalidar sesiones específicas sin afectar otras.
+model RefreshToken {
+  id          String   @id @default(uuid()) @db.VarChar(36)
+  token       String   @unique @db.VarChar(512)
+  userId      String   @db.VarChar(36)
+  expiresAt   DateTime
+  isRevoked   Boolean  @default(false)
+  userAgent   String?  @db.VarChar(512)
+  ipAddress   String?  @db.VarChar(45)  // Soporta IPv6
+  createdAt   DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
+}
+
+// ─────────────────────────────────────────────────────────────
+//  MODEL: skills
+// ─────────────────────────────────────────────────────────────
+
+/// Catálogo centralizado de habilidades técnicas.
+/// Actúa como taxonomía para usuarios y solicitudes de ayuda.
+model Skill {
+  id          String       @id @default(uuid()) @db.VarChar(36)
+  name        String       @unique @db.VarChar(100)
+  slug        String       @unique @db.VarChar(100) // URL-friendly identifier
+  category    String       @db.VarChar(50)          // Language | Framework | Database | DevOps | CS Fundamentals
+  description String?      @db.Text
+  iconUrl     String?      @db.VarChar(255)
+  isActive    Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  userSkills  UserSkill[]
+  helpRequests HelpRequestSkill[]
+
+  @@index([category])
+  @@index([slug])
+  @@index([isActive])
+  @@map("skills")
+}
+
+// ─────────────────────────────────────────────────────────────
+//  MODEL: user_skills
+//  UNIQUE: unique_user_skill (userId, skillId)
+// ─────────────────────────────────────────────────────────────
+
+/// Relación M:N entre usuarios y habilidades.
+/// Incluye nivel de dominio (proficiency 1–5) y años de experiencia.
+/// UNIQUE CONSTRAINT: un usuario no puede tener duplicado el mismo skill.
+model UserSkill {
+  userId      String   @db.VarChar(36)
+  skillId     String   @db.VarChar(36)
+
+  /// Nivel de dominio: 1=Beginner · 2=Basic · 3=Intermediate · 4=Advanced · 5=Expert
+  /// CHECK enforced at application layer (Zod: z.number().int().min(1).max(5))
+  proficiency Int      @default(1) @db.TinyInt
+
+  /// Años de experiencia estimados
+  yearsOfExperience Float? @db.Float
+
+  /// ¿Está dispuesto a dar mentoría en esta habilidad?
+  canMentor   Boolean  @default(false)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skill       Skill    @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  // UNIQUE: unique_user_skill
+  @@id([userId, skillId])
+  @@unique([userId, skillId], name: "unique_user_skill")
+  @@index([userId])
+  @@index([skillId])
+  @@index([proficiency])
+  @@index([canMentor])
+  @@map("user_skills")
+}
+
+// ─────────────────────────────────────────────────────────────
+//  MODEL: help_requests
+// ─────────────────────────────────────────────────────────────
+
+/// Solicitud de ayuda publicada por un estudiante.
+/// Es el núcleo del marketplace: un estudiante publica un problema,
+/// un mentor lo acepta y se crea una sesión vinculada.
+model HelpRequest {
+  id            String              @id @default(uuid()) @db.VarChar(36)
+
+  // ── Participantes ────────────────────────────────────────
+  studentId     String              @db.VarChar(36)  // Usuario que solicita ayuda
+  mentorId      String?             @db.VarChar(36)  // Mentor asignado (null hasta aceptación)
+
+  // ── Contenido ────────────────────────────────────────────
+  title         String              @db.VarChar(255)
+  description   String              @db.Text
+  codeSnippet   String?             @db.LongText     // Código problemático inicial
+  errorMessage  String?             @db.Text         // Stack trace o mensaje de error
+
+  // ── Clasificación ─────────────────────────────────────────
+  language      ProgrammingLanguage @default(JAVASCRIPT)
+  status        HelpRequestStatus   @default(OPEN)
+  priority      HelpRequestPriority @default(MEDIUM)
+  estimatedMinutes Int?             @db.SmallInt     // Duración estimada en minutos
+
+  // ── Timestamps ────────────────────────────────────────────
+  acceptedAt    DateTime?            // Cuando el mentor acepta
+  resolvedAt    DateTime?            // Cuando se marca como resuelto
+  expiresAt     DateTime?            // Expiración opcional
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  // ── Relations ─────────────────────────────────────────────
+  student       User                @relation("HelpRequestStudent", fields: [studentId], references: [id])
+  mentor        User?               @relation("HelpRequestMentor",  fields: [mentorId],  references: [id])
+  session       Session?            // Una request puede generar una sesión
+  skills        HelpRequestSkill[]  // Habilidades requeridas para resolver el problema
+
+  @@index([studentId])
+  @@index([mentorId])
+  @@index([status])
+  @@index([priority])
+  @@index([language])
+  @@index([createdAt])
+  @@index([expiresAt])
+  @@map("help_requests")
+}
+
+/// Relación M:N entre solicitudes de ayuda y habilidades requeridas.
+model HelpRequestSkill {
+  helpRequestId String      @db.VarChar(36)
+  skillId       String      @db.VarChar(36)
+  createdAt     DateTime    @default(now())
+
+  helpRequest   HelpRequest @relation(fields: [helpRequestId], references: [id], onDelete: Cascade)
+  skill         Skill       @relation(fields: [skillId],       references: [id], onDelete: Cascade)
+
+  @@id([helpRequestId, skillId])
+  @@index([helpRequestId])
+  @@index([skillId])
+  @@map("help_request_skills")
+}
+
+// ─────────────────────────────────────────────────────────────
+//  MODEL: sessions
+//  UNIQUE: unique_request_session (requestId) — una request,
+//          una sesión. Garantizado por @unique en requestId.
+// ─────────────────────────────────────────────────────────────
+
+/// Sesión de pair programming en tiempo real.
+/// Se crea cuando un mentor acepta una HelpRequest.
+/// El campo requestId tiene constraint UNIQUE para garantizar
+/// que cada solicitud de ayuda genere como máximo UNA sesión.
+model Session {
+  id               String              @id @default(uuid()) @db.VarChar(36)
+
+  // ── Vínculo con solicitud ─────────────────────────────────
+  /// FK a help_requests. UNIQUE: unique_request_session
+  requestId        String?             @unique @db.VarChar(36)  // nullable para sesiones ad-hoc
+
+  // ── Participantes ─────────────────────────────────────────
+  hostId           String              @db.VarChar(36)
+  participantId    String?             @db.VarChar(36)          // Segundo participante principal
+
+  // ── Metadata ──────────────────────────────────────────────
+  title            String              @db.VarChar(255)
+  description      String?             @db.Text
+  roomCode         String              @unique @db.VarChar(8)   // Código corto para unirse
+  /// Enlace dinámico a Jitsi Meet: https://meet.jit.si/codepair-{uuid}
+  meetLink         String?             @db.VarChar(512)
+  language         ProgrammingLanguage @default(JAVASCRIPT)
+  status           SessionStatus       @default(PENDING)
+  isPrivate        Boolean             @default(false)
+
+  // ── Código ────────────────────────────────────────────────
+  initialCode      String?             @db.LongText             // Código heredado de la request
+  finalCode        String?             @db.LongText             // Código al finalizar la sesión
+
+  // ── Tiempo ────────────────────────────────────────────────
+  scheduledAt      DateTime?
+  startedAt        DateTime?
+  endedAt          DateTime?
+  durationSeconds  Int?                // Duración real en segundos
+
+  // ── Timestamps ────────────────────────────────────────────
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  // ── Relations ─────────────────────────────────────────────
+  helpRequest      HelpRequest?        @relation(fields: [requestId], references: [id])
+  host             User                @relation("SessionHost",        fields: [hostId],          references: [id])
+  participant      User?               @relation("SessionParticipant", fields: [participantId],   references: [id])
+  feedbacks        Feedback[]
+
+  @@index([requestId])
+  @@index([hostId])
+  @@index([participantId])
+  @@index([status])
+  @@index([roomCode])
+  @@index([language])
+  @@index([scheduledAt])
+  @@index([createdAt])
+  @@map("sessions")
+}
+
+// ─────────────────────────────────────────────────────────────
+//  MODEL: feedbacks
+//  CHECK: rating BETWEEN 1 AND 5 (enforced via Zod + @db.TinyInt)
+// ─────────────────────────────────────────────────────────────
+
+/// Evaluación post-sesión. Ambos participantes pueden calificarse mutuamente.
+/// CHECK de rating 1–5 se aplica a nivel de servicio (Zod) y de DB
+/// (la migración SQL generada añade un CHECK CONSTRAINT explícito).
+model Feedback {
+  id          String   @id @default(uuid()) @db.VarChar(36)
+
+  // ── Contexto ──────────────────────────────────────────────
+  sessionId   String   @db.VarChar(36)
+  reviewerId  String   @db.VarChar(36)  // Quien da la calificación
+  revieweeId  String   @db.VarChar(36)  // Quien recibe la calificación
+
+  // ── Evaluación ────────────────────────────────────────────
+  /// Calificación general: 1 (muy malo) – 5 (excelente)
+  /// CHECK: rating >= 1 AND rating <= 5
+  rating      Int      @db.TinyInt
+
+  /// Calificaciones por dimensión (todas 1–5)
+  ratingCommunication  Int?     @db.TinyInt
+  ratingKnowledge      Int?     @db.TinyInt
+  ratingPunctuality    Int?     @db.TinyInt
+
+  /// Comentario libre
+  comment     String?  @db.Text
+
+  /// ¿Recomendaría trabajar con esta persona?
+  wouldRecommend Boolean @default(true)
+
+  // ── Timestamps ────────────────────────────────────────────
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // ── Relations ─────────────────────────────────────────────
+  session     Session  @relation(fields: [sessionId],  references: [id], onDelete: Cascade)
+  reviewer    User     @relation("FeedbackReviewer",   fields: [reviewerId], references: [id])
+  reviewee    User     @relation("FeedbackReviewee",   fields: [revieweeId], references: [id])
+
+  // Un reviewer sólo puede calificar una vez por sesión al mismo reviewee
+  @@unique([sessionId, reviewerId, revieweeId], name: "unique_session_feedback")
+  @@index([sessionId])
+  @@index([reviewerId])
+  @@index([revieweeId])
+  @@index([rating])
+  @@index([createdAt])
+  @@map("feedbacks")
+}

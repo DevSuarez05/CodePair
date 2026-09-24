@@ -1,0 +1,3 @@
+-- Migration metadata file required by Prisma Migrate
+-- DO NOT EDIT manually
+{"version":"0.3.14-fixed","dialect":"mysql","steps":[{"tag":"CreateTable","table":"users"},{"tag":"CreateTable","table":"refresh_tokens"},{"tag":"CreateTable","table":"skills"},{"tag":"CreateTable","table":"user_skills"},{"tag":"CreateTable","table":"help_requests"},{"tag":"CreateTable","table":"help_request_skills"},{"tag":"CreateTable","table":"sessions"},{"tag":"CreateTable","table":"feedbacks"}]}

@@ -1,0 +1,109 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #0a0c12;
+  --foreground: #f8fafc;
+  --card: #151823;
+  --card-border: #23283b;
+  --primary: #3b82f6;
+  --primary-hover: #2563eb;
+  --accent-cyan: #22d3ee;
+  --accent-purple: #a855f7;
+  --accent-green: #4ade80;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  overflow-x: hidden;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0f1117;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2a2e45;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3b82f6;
+}
+
+/* Code and markdown styles */
+pre, code {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.markdown-preview h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+  color: #60a5fa;
+}
+
+.markdown-preview h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-top: 0.85rem;
+  margin-bottom: 0.4rem;
+  color: #93c5fd;
+}
+
+.markdown-preview p {
+  margin-bottom: 0.75rem;
+  line-height: 1.6;
+  color: #cbd5e1;
+}
+
+.markdown-preview code {
+  background-color: #1e2235;
+  color: #38bdf8;
+  padding: 0.15rem 0.4rem;
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+}
+
+.markdown-preview pre {
+  background-color: #131620;
+  border: 1px solid #23283b;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+  margin: 0.75rem 0;
+}
+
+.markdown-preview ul, .markdown-preview ol {
+  margin-left: 1.5rem;
+  margin-bottom: 0.75rem;
+  color: #cbd5e1;
+}
+
+.markdown-preview ul {
+  list-style-type: disc;
+}
+
+.markdown-preview ol {
+  list-style-type: decimal;
+}
+
+.markdown-preview blockquote {
+  border-left: 3px solid #3b82f6;
+  padding-left: 0.75rem;
+  margin: 0.75rem 0;
+  color: #94a3b8;
+  font-style: italic;
+}
