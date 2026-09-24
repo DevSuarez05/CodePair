@@ -30,6 +30,9 @@ tmp/
 temp/
 *.tmp
 *.temp
+*.zip
+*.tar.gz
+*.rar
 .DS_Store
 Thumbs.db
 
