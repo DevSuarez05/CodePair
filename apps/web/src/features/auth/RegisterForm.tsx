@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
@@ -68,11 +68,17 @@ const COMMON_TIMEZONES = [
 export interface RegisterFormProps {
   onSuccess?: (data: unknown) => void;
   onNavigateToLogin?: () => void;
+  /** Abre el formulario en modo login (p. ej. ruta `/login`). */
+  initialAuthMode?: 'register' | 'login';
 }
 
-export function RegisterForm({ onSuccess, onNavigateToLogin }: RegisterFormProps) {
+export function RegisterForm({
+  onSuccess,
+  onNavigateToLogin,
+  initialAuthMode = 'register',
+}: RegisterFormProps) {
   // Modo de visualización: Registro o Inicio de Sesión
-  const [authMode, setAuthMode] = useState<'register' | 'login'>('register');
+  const [authMode, setAuthMode] = useState<'register' | 'login'>(initialAuthMode);
 
   // Manejo de paso en el wizard: 1 = Datos de cuenta & Rol, 2 = Preferencias & Habilidades
   const [step, setStep] = useState<1 | 2>(1);
@@ -81,6 +87,30 @@ export function RegisterForm({ onSuccess, onNavigateToLogin }: RegisterFormProps
   const [serverError, setServerError] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
   const [skillSearchQuery, setSkillSearchQuery] = useState('');
+
+  // Estados para el modo Login real
+  const [loginEmail, setLoginEmail] = useState('alice.johnson@demo.com');
+  const [loginPassword, setLoginPassword] = useState('Demo@CodePair2024!');
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
+
+  // Catálogo dinámico de habilidades cargado desde MySQL (/skills)
+  const [catalogSkills, setCatalogSkills] = useState<Array<{ id: string; name: string; category: string }>>(PRESET_SKILLS);
+
+  useEffect(() => {
+    let isMounted = true;
+    apiClient.get('/skills')
+      .then((res) => {
+        const data = res.data?.data || res.data;
+        if (Array.isArray(data) && data.length > 0 && isMounted) {
+          setCatalogSkills(data);
+        }
+      })
+      .catch(() => {
+        // Fallback a PRESET_SKILLS si la API no responde
+      });
+    return () => { isMounted = false; };
+  }, []);
 
   // Detección automática del timezone del navegador
   const detectedTimezone =
@@ -207,7 +237,42 @@ export function RegisterForm({ onSuccess, onNavigateToLogin }: RegisterFormProps
     }
   };
 
-  // Envío final del formulario
+  // Inicio de sesión real contra POST /api/v1/auth/login
+  const handleLogin = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    setIsLoggingIn(true);
+    setLoginError(null);
+    try {
+      const response = await apiClient.post('/auth/login', {
+        email: loginEmail.trim().toLowerCase(),
+        password: loginPassword,
+      });
+
+      const data = response.data?.data || response.data;
+      if (typeof window !== 'undefined') {
+        if (data?.accessToken) {
+          localStorage.setItem('codepair_access_token', data.accessToken);
+        }
+        if (data?.user) {
+          localStorage.setItem('codepair_user', JSON.stringify(data.user));
+        }
+      }
+
+      toast.success(`¡Bienvenido de nuevo, ${data?.user?.displayName || 'Desarrollador'}!`);
+      onSuccess?.(data);
+    } catch (err: unknown) {
+      const errorMsg =
+        (err as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message || 'Error al iniciar sesión. Verifica tu correo y contraseña.';
+      const formattedMsg = typeof errorMsg === 'string' ? errorMsg : JSON.stringify(errorMsg);
+      setLoginError(formattedMsg);
+      toast.error(formattedMsg);
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
+  // Envío final del formulario de Registro
   const onSubmit = async (data: RegisterFormData) => {
     setServerError(null);
     try {
@@ -228,9 +293,19 @@ export function RegisterForm({ onSuccess, onNavigateToLogin }: RegisterFormProps
         })),
       });
 
+      const resData = response.data?.data || response.data;
+      if (typeof window !== 'undefined') {
+        if (resData?.accessToken) {
+          localStorage.setItem('codepair_access_token', resData.accessToken);
+        }
+        if (resData?.user) {
+          localStorage.setItem('codepair_user', JSON.stringify(resData.user));
+        }
+      }
+
       setIsSuccess(true);
-      toast.success('¡Registro exitoso! Sesión iniciada con cookie segura.');
-      onSuccess?.(response.data);
+      toast.success('¡Registro exitoso! Sesión iniciada correctamente.');
+      onSuccess?.(resData);
     } catch (err: unknown) {
       const errorMsg =
         (err as { response?: { data?: { message?: string } } })?.response?.data
@@ -241,10 +316,10 @@ export function RegisterForm({ onSuccess, onNavigateToLogin }: RegisterFormProps
     }
   };
 
-  // Filtrado de habilidades no agregadas aún
-  const availableSkills = PRESET_SKILLS.filter(
+  // Filtrado de habilidades no agregadas aún (utilizando catálogo dinámico de MySQL)
+  const availableSkills = catalogSkills.filter(
     (skill) =>
-      !selectedSkills.some((s) => s.skillId === skill.id) &&
+      !selectedSkills.some((s) => s.skillId === skill.id || s.skillName === skill.name) &&
       skill.name.toLowerCase().includes(skillSearchQuery.toLowerCase()),
   );
 
@@ -372,24 +447,35 @@ export function RegisterForm({ onSuccess, onNavigateToLogin }: RegisterFormProps
       )}
 
       {authMode === 'login' ? (
-        <div className="space-y-6 max-w-md mx-auto py-4 animate-fade-in">
+        <form onSubmit={handleLogin} className="space-y-6 max-w-md mx-auto py-4 animate-fade-in">
           <div className="text-center mb-4">
             <h2 className="text-lg font-bold text-white">Inicia sesión en tu cuenta</h2>
             <p className="text-xs text-slate-400 mt-1">Accede a tus sesiones de pair programming y mentorías</p>
           </div>
+
+          {loginError && (
+            <div className="rounded-xl bg-red-950/60 border border-red-500/40 p-3 text-xs text-red-300 flex items-start gap-2.5">
+              <AlertCircle className="h-4 w-4 shrink-0 text-red-400 mt-0.5" />
+              <span>{loginError}</span>
+            </div>
+          )}
+
           <div className="space-y-4">
             <Input
               label="Correo Institucional o Profesional"
               type="email"
               placeholder="tu-correo@codepair.dev"
               leftIcon={<Mail className="h-4 w-4" />}
-              defaultValue="mentor@codepair.dev"
+              value={loginEmail}
+              onChange={(e) => setLoginEmail(e.target.value)}
+              required
             />
             <Input
               label="Contraseña"
               type={showPassword ? 'text' : 'password'}
               placeholder="••••••••••••"
-              defaultValue="CodePair2026!"
+              value={loginPassword}
+              onChange={(e) => setLoginPassword(e.target.value)}
               leftIcon={<Lock className="h-4 w-4" />}
               rightIcon={
                 <button
@@ -400,6 +486,7 @@ export function RegisterForm({ onSuccess, onNavigateToLogin }: RegisterFormProps
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               }
+              required
             />
           </div>
           <div className="flex items-center justify-between text-xs text-slate-400">
@@ -410,16 +497,13 @@ export function RegisterForm({ onSuccess, onNavigateToLogin }: RegisterFormProps
             <a href="#" className="text-brand-400 hover:underline">¿Olvidaste tu contraseña?</a>
           </div>
           <Button
-            type="button"
+            type="submit"
             variant="glow"
             size="lg"
             className="w-full text-sm font-semibold"
-            onClick={() => {
-              toast.success('¡Sesión iniciada con éxito!');
-              onSuccess?.({ username: 'mentor_lead' });
-            }}
+            disabled={isLoggingIn}
           >
-            Iniciar Sesión en CodePair
+            {isLoggingIn ? 'Iniciando sesión…' : 'Iniciar Sesión en CodePair'}
           </Button>
           <p className="text-center text-xs text-slate-400 pt-2">
             ¿No tienes cuenta aún?{' '}
@@ -431,7 +515,7 @@ export function RegisterForm({ onSuccess, onNavigateToLogin }: RegisterFormProps
               Regístrate gratis
             </button>
           </p>
-        </div>
+        </form>
       ) : (
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         {/* ============================================================ */}

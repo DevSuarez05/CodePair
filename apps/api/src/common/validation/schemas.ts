@@ -96,6 +96,8 @@ export const registerSchema = z.object({
 export const loginSchema = z.object({
   email: z
     .string({ required_error: 'Email is required' })
+    .trim()
+    .toLowerCase()
     .email('Must be a valid email address'),
   password: z
     .string({ required_error: 'Password is required' })
@@ -108,7 +110,7 @@ export const loginSchema = z.object({
 export const createHelpRequestSchema = z.object({
   skillId: z
     .string({ required_error: 'skillId is required' })
-    .uuid('skillId must be a valid UUID'),
+    .min(1, 'skillId is required'),
   title: z
     .string({ required_error: 'Title is required' })
     .min(5, 'Title must be at least 5 characters')

@@ -18,8 +18,6 @@ import {
 import { JwtPayload } from '../../domain/types/domain.types';
 
 @ApiTags('Help Requests')
-@ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
 @Controller('requests')
 export class HelpRequestsController {
   constructor(private readonly service: HelpRequestsService) {}
@@ -27,6 +25,8 @@ export class HelpRequestsController {
   // ─── POST /api/v1/requests ────────────────────────────────────
 
   @Post()
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
     summary: 'HU-02 — Create a new technical help request',
@@ -75,6 +75,8 @@ export class HelpRequestsController {
   // ─── PATCH /api/v1/requests/:id/cancel ───────────────────────
 
   @Patch(':id/cancel')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Cancel an open help request (student only)' })
   @ApiResponse({ status: 200 })

@@ -206,6 +206,17 @@ export function RequestFeed({
     status: '',
   });
 
+  const [skillsCatalog, setSkillsCatalog] = useState<Array<{ id: string; name: string; category: string }>>([]);
+
+  useEffect(() => {
+    apiClient.get('/skills')
+      .then((res) => {
+        const data = res.data?.data || res.data;
+        if (Array.isArray(data)) setSkillsCatalog(data);
+      })
+      .catch(() => {});
+  }, []);
+
   // Carga de solicitudes desde la API con fallback
   const fetchRequests = async (isManualRefresh = false) => {
     if (isManualRefresh) setIsRefreshing(true);
@@ -302,6 +313,7 @@ export function RequestFeed({
       <FeedFilters
         filters={filters}
         onChange={setFilters}
+        availableSkills={skillsCatalog}
         totalCount={filteredRequests.length}
       />
 

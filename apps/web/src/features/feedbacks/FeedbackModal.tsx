@@ -36,8 +36,26 @@ export function FeedbackModal({
   const [serverError, setServerError] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
 
-  // Determinar a quién se califica (el compañero de la sesión)
-  const reviewee = session?.participant || session?.host;
+  // Determinar a quién se califica (el compañero de la sesión, no el usuario actual)
+  const currentUser = typeof window !== 'undefined'
+    ? (() => {
+        try {
+          return JSON.parse(localStorage.getItem('codepair_user') || '{}');
+        } catch {
+          return {};
+        }
+      })()
+    : {};
+
+  const isCurrentUserHost = Boolean(currentUser?.id && session?.hostId === currentUser.id);
+  const reviewee = isCurrentUserHost
+    ? (session?.participant || session?.host)
+    : (session?.host || session?.participant);
+
+  const targetRevieweeId = isCurrentUserHost
+    ? (session?.participantId || session?.participant?.id || '')
+    : (session?.hostId || session?.host?.id || '');
+
   const revieweeName = reviewee?.displayName || reviewee?.username || 'tu compañero de sesión';
   const revieweeInitials = revieweeName.slice(0, 2).toUpperCase();
 
@@ -53,7 +71,7 @@ export function FeedbackModal({
     resolver: zodResolver(createFeedbackSchema),
     defaultValues: {
       sessionId: session?.id || '',
-      revieweeId: reviewee?.id || '',
+      revieweeId: targetRevieweeId || reviewee?.id || '',
       rating: 5,
       ratingCommunication: 5,
       ratingKnowledge: 5,
@@ -68,23 +86,23 @@ export function FeedbackModal({
 
   // Actualizar valores si cambia la sesión
   React.useEffect(() => {
-    if (session && reviewee) {
+    if (session) {
       setValue('sessionId', session.id);
-      setValue('revieweeId', reviewee.id);
+      setValue('revieweeId', targetRevieweeId || reviewee?.id || '');
     }
-  }, [session, reviewee, setValue]);
+  }, [session, targetRevieweeId, reviewee, setValue]);
 
   const onSubmit = async (data: CreateFeedbackFormData) => {
     setServerError(null);
     try {
       if (session) {
         await apiClient.post(`/sessions/${session.id}/feedback`, {
-          revieweeId: data.revieweeId,
+          revieweeId: targetRevieweeId || data.revieweeId,
           rating: data.rating,
           ratingCommunication: data.ratingCommunication,
           ratingKnowledge: data.ratingKnowledge,
           ratingPunctuality: data.ratingPunctuality,
-          comment: data.comment,
+          comment: data.comment?.trim() || undefined,
           wouldRecommend: data.wouldRecommend,
         });
       }

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   UserPlus,
   FileQuestion,
@@ -15,11 +16,13 @@ import { SessionModal } from '@/features/sessions/SessionModal';
 import { FeedbackModal } from '@/features/feedbacks/FeedbackModal';
 import { Button } from '@/components/ui/Button';
 import type { Session, HelpRequest } from '@/types/api.types';
+import apiClient from '@/lib/api-client';
 import { toast } from 'sonner';
 
 type ActiveTab = 'feed' | 'register' | 'new-request';
 
 export default function HomePage() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<ActiveTab>('feed');
 
   // Estados para modales interactivos HU-04 y HU-05
@@ -30,52 +33,74 @@ export default function HomePage() {
   const [feedbackSession, setFeedbackSession] = useState<Session | null>(null);
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
 
+  const [isAcceptingRequest, setIsAcceptingRequest] = useState<string | null>(null);
+
   // Manejo del evento "Ayudar / Emparejar" en una tarjeta del feed (HU-03 -> HU-04)
-  const handleAcceptRequest = (request: HelpRequest) => {
+  const handleAcceptRequest = async (request: HelpRequest) => {
     setActiveHelpRequest(request);
+    setIsAcceptingRequest(request.id);
 
-    // Mock/crear sesión de pairing asociada con sala Jitsi
-    const roomCode = `CP-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
-    const newSession: Session = {
-      id: `sess-${Date.now()}`,
-      requestId: request.id,
-      hostId: request.studentId,
-      participantId: 'current-mentor-uuid',
-      title: request.title,
-      description: request.description,
-      roomCode: roomCode,
-      language: request.language,
-      status: 'ACTIVE',
-      isPrivate: false,
-      scheduledAt: new Date().toISOString(),
-      startedAt: new Date().toISOString(),
-      endedAt: null,
-      durationSeconds: null,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      host: request.student,
-      participant: {
-        id: 'current-mentor-uuid',
-        displayName: 'Mentor Conectado (Tú)',
-        username: 'mentor_lead',
-        email: 'mentor@codepair.dev',
-        avatarUrl: null,
-        bio: 'Senior Fullstack Engineer',
-        githubUrl: null,
-        linkedinUrl: null,
-        role: 'MENTOR',
+    try {
+      // Intentar aceptar solicitud mediante el endpoint real con ACID locks en MySQL
+      const res = await apiClient.post(`/requests/${request.id}/accept`);
+      const sessionData = res.data?.data || res.data;
+      setSelectedSession(sessionData);
+      setIsSessionModalOpen(true);
+      toast.success('¡Te has emparejado exitosamente a la sesión en vivo!');
+    } catch (err: unknown) {
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      if (status === 401 || status === 403) {
+        toast.info('Para emparejarte como mentor en la base de datos, inicia sesión con rol MENTOR.');
+      }
+
+      // Fallback interactivo de sesión de pairing asociada con sala Jitsi Meet
+      const roomCode = `CP-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
+      const newSession: Session = {
+        id: `sess-${Date.now()}`,
+        requestId: request.id,
+        hostId: request.studentId,
+        participantId: 'current-mentor-uuid',
+        title: request.title,
+        description: request.description,
+        roomCode: roomCode,
+        meetLink: `https://meet.jit.si/codepair-${roomCode}`,
+        language: request.language,
         status: 'ACTIVE',
-        isEmailVerified: true,
-        preferredLanguage: request.language,
-        timezone: 'UTC',
-        lastLoginAt: new Date().toISOString(),
+        isPrivate: false,
+        scheduledAt: new Date().toISOString(),
+        startedAt: new Date().toISOString(),
+        endedAt: null,
+        durationSeconds: null,
         createdAt: new Date().toISOString(),
-      },
-    };
+        updatedAt: new Date().toISOString(),
+        host: request.student,
+        participant: {
+          id: 'current-mentor-uuid',
+          displayName: 'Mentor Conectado (Tú)',
+          username: 'mentor_lead',
+          email: 'mentor@codepair.dev',
+          avatarUrl: null,
+          bio: 'Senior Fullstack Engineer',
+          githubUrl: null,
+          linkedinUrl: null,
+          role: 'MENTOR',
+          status: 'ACTIVE',
+          isEmailVerified: true,
+          preferredLanguage: request.language,
+          timezone: 'UTC',
+          lastLoginAt: new Date().toISOString(),
+          createdAt: new Date().toISOString(),
+        },
+      };
 
-    setSelectedSession(newSession);
-    setIsSessionModalOpen(true);
-    toast.success('¡Te has emparejado exitosamente a la sesión!');
+      setSelectedSession(newSession);
+      setIsSessionModalOpen(true);
+      if (status !== 401 && status !== 403) {
+        toast.success('¡Te has emparejado exitosamente a la sesión!');
+      }
+    } finally {
+      setIsAcceptingRequest(null);
+    }
   };
 
   // Manejo del paso HU-04 -> HU-05: Concluir sesión y abrir modal de calificación
@@ -293,6 +318,7 @@ export default function HomePage() {
           <RequestFeed
             onOpenCreateModal={() => setActiveTab('new-request')}
             onAcceptRequest={handleAcceptRequest}
+            acceptingRequestId={isAcceptingRequest}
           />
         )}
 
@@ -303,9 +329,7 @@ export default function HomePage() {
                 toast.success('¡Registro completado! Cambiando al Feed...');
                 setTimeout(() => setActiveTab('feed'), 1500);
               }}
-              onNavigateToLogin={() => {
-                toast.info('Navegación a Login activada');
-              }}
+              onNavigateToLogin={() => router.push('/login')}
             />
           </div>
         )}

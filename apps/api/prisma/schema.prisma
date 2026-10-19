@@ -116,7 +116,7 @@ model User {
   displayName         String              @db.VarChar(100)
   username            String              @unique @db.VarChar(50)
   email               String              @unique @db.VarChar(255)
-  passwordHash        String              @map("password_hash") @db.VarChar(255)
+  passwordHash        String              @db.VarChar(255)
 
   // ── Profile ───────────────────────────────────────────────
   avatarUrl           String?             @db.VarChar(512)

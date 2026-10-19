@@ -129,18 +129,48 @@ export class AuthService {
         select: userSelectFields,
       });
 
-      // Insertar relaciones de habilidades técnicas seleccionadas
+      // Insertar relaciones de habilidades técnicas válidas
       if (input.skills.length > 0) {
-        await tx.userSkill.createMany({
-          data: input.skills.map((s) => ({
-            userId:           createdUser.id,
-            skillId:          s.skillId,
-            proficiency:      PROFICIENCY_MAP[s.level] ?? 1,
-            proficiencyLevel: s.level as any,
-            canMentor:        input.role === 'MENTOR' || s.level === 'ADVANCED',
-          })),
-          skipDuplicates: true,
+        const skillIds = input.skills.map((s) => s.skillId);
+        const foundSkills = await tx.skill.findMany({
+          where: {
+            OR: [
+              { id: { in: skillIds } },
+              { slug: { in: skillIds.map((s) => String(s).toLowerCase()) } },
+            ],
+            isActive: true,
+          },
+          select: { id: true, slug: true },
         });
+
+        const idMap = new Map<string, string>();
+        foundSkills.forEach((f) => {
+          idMap.set(f.id, f.id);
+          idMap.set(f.slug.toLowerCase(), f.id);
+        });
+
+        const validSkills = input.skills
+          .filter(
+            (s) =>
+              idMap.has(s.skillId) ||
+              idMap.has(String(s.skillId).toLowerCase()),
+          )
+          .map((s) => ({
+            userId: createdUser.id,
+            skillId:
+              idMap.get(s.skillId) ||
+              idMap.get(String(s.skillId).toLowerCase())!,
+            proficiency: PROFICIENCY_MAP[s.level] ?? 1,
+            proficiencyLevel: s.level as any,
+            canMentor: input.role === 'MENTOR' || s.level === 'ADVANCED',
+          }));
+
+        if (validSkills.length > 0) {
+          await tx.userSkill.createMany({
+            data: validSkills,
+            skipDuplicates: true,
+          });
+        }
       }
 
       return createdUser;
@@ -276,9 +306,10 @@ export class AuthService {
         .catch(() => undefined);
     }
 
-    // Limpiar cookies
-    res.clearCookie(ACCESS_COOKIE);
-    res.clearCookie(REFRESH_COOKIE);
+    // Limpiar cookies en todos los scopes posibles
+    res.clearCookie(ACCESS_COOKIE, { path: '/' });
+    res.clearCookie(REFRESH_COOKIE, { path: '/' });
+    res.clearCookie(REFRESH_COOKIE, { path: '/api/v1/auth/refresh' });
   }
 
   // ──────────────────────────────────────────────────────────────
@@ -336,7 +367,7 @@ export class AuthService {
     res.cookie(REFRESH_COOKIE, refreshToken, {
       ...baseOptions,
       maxAge: (rememberMe ? 30 : 7) * 24 * 60 * 60 * 1000,
-      path:   '/api/v1/auth/refresh', // Scope del refresh cookie
+      path:   '/',
     });
   }
 

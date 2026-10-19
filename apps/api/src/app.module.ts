@@ -10,6 +10,7 @@ import { UsersModule } from './modules/users/users.module';
 import { HelpRequestsModule } from './modules/help-requests/help-requests.module';
 import { SessionsModule } from './modules/sessions/sessions.module';
 import { FeedbacksModule } from './modules/feedbacks/feedbacks.module';
+import { SkillsModule } from './modules/skills/skills.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { FeedbacksModule } from './modules/feedbacks/feedbacks.module';
     HelpRequestsModule, // POST /requests, GET /requests, GET /requests/:id, PATCH /requests/:id/cancel
     SessionsModule,     // POST /requests/:id/accept, GET /sessions, GET /sessions/:id
     FeedbacksModule,    // POST /sessions/:id/feedback, GET /sessions/:id/feedback
+    SkillsModule,       // GET /skills, GET /skills/:id
   ],
 })
 export class AppModule {}

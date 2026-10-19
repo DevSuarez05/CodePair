@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
@@ -56,6 +56,7 @@ export function CreateRequestForm({ onSuccess, onCancel }: CreateRequestFormProp
   const [isSkillDropdownOpen, setIsSkillDropdownOpen] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [skillList, setSkillList] = useState(AVAILABLE_SKILLS);
 
   // Fechas por defecto: ahora + 2 horas
   const now = new Date();
@@ -84,13 +85,33 @@ export function CreateRequestForm({ onSuccess, onCancel }: CreateRequestFormProp
     },
   });
 
+  useEffect(() => {
+    let isMounted = true;
+    apiClient.get('/skills')
+      .then((res) => {
+        const data = res.data?.data || res.data;
+        if (Array.isArray(data) && data.length > 0 && isMounted) {
+          const mapped = data.map((d: any) => ({
+            id: d.id,
+            name: d.name,
+            category: d.category || 'General',
+            defaultLang: 'TYPESCRIPT',
+          }));
+          setSkillList(mapped);
+          setValue('skillId', mapped[0].id);
+        }
+      })
+      .catch(() => {});
+    return () => { isMounted = false; };
+  }, [setValue]);
+
   const selectedSkillId = watch('skillId');
   const descriptionText = watch('description') || '';
   const currentPriority = watch('priority');
-  const selectedSkill = AVAILABLE_SKILLS.find((s) => s.id === selectedSkillId);
+  const selectedSkill = skillList.find((s) => s.id === selectedSkillId) || skillList[0];
 
   // Filtrar tecnologías por búsqueda
-  const filteredSkills = AVAILABLE_SKILLS.filter(
+  const filteredSkills = skillList.filter(
     (skill) =>
       skill.name.toLowerCase().includes(skillSearch.toLowerCase()) ||
       skill.category.toLowerCase().includes(skillSearch.toLowerCase()),
@@ -99,18 +120,20 @@ export function CreateRequestForm({ onSuccess, onCancel }: CreateRequestFormProp
   const onSubmit = async (data: CreateHelpRequestFormData) => {
     setServerError(null);
     try {
-      // Convertir a ISO 8601 strings para el backend
+      // Convertir a ISO 8601 strings para el backend con guardia de fecha válida
+      const isValidDate = (d: unknown) => typeof d === 'string' && d.length > 0 && !isNaN(new Date(d).getTime());
+
       const payload = {
         skillId: data.skillId,
-        title: data.title,
-        description: data.description,
-        codeSnippet: data.codeSnippet || undefined,
-        errorMessage: data.errorMessage || undefined,
+        title: data.title.trim(),
+        description: data.description.trim(),
+        codeSnippet: data.codeSnippet?.trim() || undefined,
+        errorMessage: data.errorMessage?.trim() || undefined,
         language: data.language,
         priority: data.priority,
-        estimatedMinutes: data.estimatedMinutes,
-        availableFrom: new Date(data.availableFrom).toISOString(),
-        availableTo: new Date(data.availableTo).toISOString(),
+        estimatedMinutes: data.estimatedMinutes ? Number(data.estimatedMinutes) : undefined,
+        availableFrom: isValidDate(data.availableFrom) ? new Date(data.availableFrom).toISOString() : undefined,
+        availableTo: isValidDate(data.availableTo) ? new Date(data.availableTo).toISOString() : undefined,
       };
 
       const res = await apiClient.post('/requests', payload);

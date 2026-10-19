@@ -109,11 +109,14 @@ export function RequestCard({ request, onAccept, isAccepting = false }: RequestC
           </Badge>
 
           {request.skills &&
-            request.skills.map((skill) => (
-              <Badge key={skill.id} variant="brand" size="sm">
-                <span>{skill.name}</span>
-              </Badge>
-            ))}
+            request.skills.map((item: any, idx: number) => {
+              const skillObj = item?.skill || item;
+              return (
+                <Badge key={skillObj?.id || idx} variant="brand" size="sm">
+                  <span>{skillObj?.name || 'Skill'}</span>
+                </Badge>
+              );
+            })}
         </div>
 
         {/* Botón de Ayudar / Emparejar */}

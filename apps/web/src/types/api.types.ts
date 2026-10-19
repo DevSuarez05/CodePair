@@ -153,6 +153,7 @@ export interface Session {
   title: string;
   description: string | null;
   roomCode: string;
+  meetLink?: string | null;
   language: ProgrammingLanguage;
   status: SessionStatus;
   isPrivate: boolean;

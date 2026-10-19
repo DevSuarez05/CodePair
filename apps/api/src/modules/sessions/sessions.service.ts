@@ -107,7 +107,13 @@ export class SessionsService {
       select: { id: true, role: true },
     });
 
-    if (!mentor || mentor.role === 'STUDENT') {
+    const isMentorOrAdmin =
+      mentor &&
+      (mentor.role === 'MENTOR' ||
+        mentor.role === 'ADMIN' ||
+        mentor.role === 'ADMINISTRADOR');
+
+    if (!isMentorOrAdmin) {
       throw new ForbiddenException('Only users with MENTOR or ADMIN role can accept requests.');
     }
 
@@ -173,7 +179,7 @@ export class SessionsService {
             language:      request.language,
             roomCode,
             meetLink,
-            status:        'PENDING',
+            status:        'ACTIVE',
             isPrivate:     false,
             startedAt:     now,
           },

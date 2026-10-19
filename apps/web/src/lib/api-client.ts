@@ -22,7 +22,16 @@ const apiClient: AxiosInstance = axios.create({
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     // Attach request ID for tracing
-    config.headers['X-Request-ID'] = crypto.randomUUID();
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+      config.headers['X-Request-ID'] = crypto.randomUUID();
+    }
+    // Attach Bearer token from storage if present (complements HttpOnly cookies)
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('codepair_access_token');
+      if (token && !config.headers.Authorization) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    }
     return config;
   },
   (error) => Promise.reject(error),
@@ -47,11 +56,17 @@ apiClient.interceptors.response.use(
         // Retry original request with new cookie
         return apiClient(originalRequest);
       } catch {
-        // Refresh failed — redirect to login
-        if (typeof window !== 'undefined') {
+        // Refresh failed — redirect to login (avoid loop on /login)
+        if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
           window.location.href = '/login';
         }
       }
+    }
+
+    // Network / API down (e.g. backend not listening on :3001)
+    if (!error.response && error.code === 'ERR_NETWORK') {
+      error.message =
+        'No se pudo conectar con la API. Comprueba que el servidor backend esté en ejecución (npm run dev en la raíz).';
     }
 
     return Promise.reject(error);

@@ -163,8 +163,9 @@ export const createFeedbackSchema = z.object({
   ratingPunctuality: z.number().int().min(1).max(5).optional(),
   comment: z
     .string()
-    .min(5, 'El comentario debe tener al menos 5 caracteres')
-    .max(2000, 'El comentario no puede exceder los 2,000 caracteres'),
+    .max(2000, 'El comentario no puede exceder los 2,000 caracteres')
+    .optional()
+    .or(z.literal('')),
   wouldRecommend: z.boolean().default(true),
 });
 

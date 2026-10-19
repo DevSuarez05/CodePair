@@ -9,13 +9,13 @@ export class UsersService {
     const user = await this.db.user.findUnique({
       where: { id, deletedAt: null },
       select: {
-        id: true, email: true, username: true, displayName: true,
+        id: true, name: true, email: true, username: true, displayName: true,
         avatarUrl: true, bio: true, githubUrl: true, linkedinUrl: true,
-        role: true, status: true, preferredLanguage: true, timezone: true,
+        role: true, status: true, language: true, preferredLanguage: true, timezone: true,
         isEmailVerified: true, lastLoginAt: true, createdAt: true,
         userSkills: {
           select: {
-            proficiency: true, yearsOfExperience: true, canMentor: true,
+            proficiency: true, proficiencyLevel: true, yearsOfExperience: true, canMentor: true,
             skill: { select: { id: true, name: true, slug: true, category: true } },
           },
         },

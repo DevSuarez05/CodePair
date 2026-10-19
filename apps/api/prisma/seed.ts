@@ -660,7 +660,15 @@ async function seedUsers(): Promise<Map<string, string>> {
     });
 
     userMap.set(record.email, record.id);
-    const roleIcon = { ADMIN: '🔑', MENTOR: '🎓', STUDENT: '📖' }[record.role];
+
+    const roleIcons: Record<string, string> = {
+      ADMIN: '🔑',
+      ADMINISTRADOR: '🔑',
+      MENTOR: '🎓',
+      STUDENT: '📖',
+      APRENDIZ: '📖',
+    };
+    const roleIcon = roleIcons[record.role] ?? '👤';
     console.log(`   ${roleIcon} ${record.email}`);
   }
 

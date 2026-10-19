@@ -1,4 +1,4 @@
-import { Logger } from '@nestjs/common';
+import { ConsoleLogger } from '@nestjs/common';
 import * as winston from 'winston';
 
 const { combine, timestamp, printf, colorize, errors, json } = winston.format;
@@ -10,11 +10,11 @@ const { combine, timestamp, printf, colorize, errors, json } = winston.format;
  * - Development: Pretty-printed with colors
  * - Production: JSON structured output (for log aggregators like Datadog, CloudWatch)
  */
-export class WinstonLogger extends Logger {
+export class WinstonLogger extends ConsoleLogger {
   private readonly winstonLogger: winston.Logger;
 
   private constructor(winstonLogger: winston.Logger) {
-    super();
+    super(WinstonLogger.name);
     this.winstonLogger = winstonLogger;
   }
 

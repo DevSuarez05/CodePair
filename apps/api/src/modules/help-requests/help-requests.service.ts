@@ -65,13 +65,20 @@ export class HelpRequestsService {
   // ──────────────────────────────────────────────────────────────
 
   async create(input: CreateHelpRequestInput, studentId: string) {
-    // 1. Verificar que el skill existe y está activo
-    const skill = await this.db.skill.findUnique({
-      where: { id: input.skillId, isActive: true },
+    // 1. Verificar que el skill existe y está activo (por id, slug o nombre)
+    const skill = await this.db.skill.findFirst({
+      where: {
+        OR: [
+          { id: input.skillId },
+          { slug: input.skillId.toLowerCase() },
+          { name: input.skillId },
+        ],
+        isActive: true,
+      },
       select: { id: true, name: true },
     });
     if (!skill) {
-      throw new NotFoundException(`Skill with ID "${input.skillId}" not found or inactive.`);
+      throw new NotFoundException(`Skill with ID or name "${input.skillId}" not found or inactive.`);
     }
 
     // 2. Verificar que el estudiante no tenga ya una solicitud OPEN para el mismo skill
@@ -108,7 +115,7 @@ export class HelpRequestsService {
         estimatedMinutes: input.estimatedMinutes ?? null,
         expiresAt,
         skills: {
-          create: [{ skillId: input.skillId }],
+          create: [{ skillId: skill.id }],
         },
       },
       select: requestDetailSelect,
@@ -162,8 +169,13 @@ export class HelpRequestsService {
       }),
     ]);
 
+    const formattedData = data.map((req) => ({
+      ...req,
+      skills: req.skills?.map((s) => s.skill) || [],
+    }));
+
     return {
-      data,
+      data: formattedData,
       meta: {
         page,
         limit,
@@ -185,7 +197,10 @@ export class HelpRequestsService {
       select: requestDetailSelect,
     });
     if (!request) throw new NotFoundException('Help request not found.');
-    return request;
+    return {
+      ...request,
+      skills: request.skills?.map((s) => s.skill) || [],
+    };
   }
 
   // ──────────────────────────────────────────────────────────────
