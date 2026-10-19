@@ -230,8 +230,11 @@ export function RequestFeed({
       if (filters.status) params.append('status', filters.status);
 
       const res = await apiClient.get(`/requests?${params.toString()}`);
-      if (res.data?.data && Array.isArray(res.data.data)) {
-        setRequests(res.data.data);
+      const rawList = res.data?.data?.data || res.data?.data || res.data;
+      if (Array.isArray(rawList) && rawList.length > 0) {
+        setRequests(rawList);
+      } else if (Array.isArray(rawList) && rawList.length === 0) {
+        setRequests([]);
       } else {
         setRequests(DEMO_REQUESTS);
       }

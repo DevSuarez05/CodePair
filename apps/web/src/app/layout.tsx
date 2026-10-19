@@ -1,3 +1,5 @@
+import Script from 'next/script';
+
 import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from 'sonner';
@@ -54,6 +56,16 @@ export default function RootLayout({
         </footer>
 
         <Toaster position="bottom-right" richColors theme="dark" />
+
+        {/* Botpress Webchat */}
+        <Script
+          src="https://cdn.botpress.cloud/webchat/v5.0/inject.js"
+          strategy="afterInteractive"
+        />
+        <Script
+          src="https://files.bpcontent.cloud/2026/10/14/14/20261014142214-I46JSHKM.js"
+          strategy="afterInteractive"
+        />
       </body>
     </html>
   );
