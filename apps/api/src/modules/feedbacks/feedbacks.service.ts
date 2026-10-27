@@ -8,12 +8,16 @@ import {
 } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
 import { CreateFeedbackInput } from '../../common/validation/schemas';
+import { EventsGateway } from '../../gateway/events.gateway';
 
 @Injectable()
 export class FeedbacksService {
   private readonly logger = new Logger(FeedbacksService.name);
 
-  constructor(private readonly db: DatabaseService) {}
+  constructor(
+    private readonly db: DatabaseService,
+    private readonly gateway: EventsGateway,
+  ) {}
 
   // ──────────────────────────────────────────────────────────────
   //  CREATE FEEDBACK — POST /api/sessions/:id/feedback
@@ -152,6 +156,8 @@ export class FeedbacksService {
           `Session ${sessionId} completed after ${totalFeedbacksAfter} feedbacks. ` +
           `Duration: ${durationSeconds}s`,
         );
+
+        this.gateway.notifySessionCompleted(sessionId);
       }
 
       return feedback;

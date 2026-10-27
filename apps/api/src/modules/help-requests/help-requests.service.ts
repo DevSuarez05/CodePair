@@ -12,6 +12,7 @@ import {
   HelpRequestFilterInput,
 } from '../../common/validation/schemas';
 import { PaginatedResult } from '../../domain/types/domain.types';
+import { EventsGateway } from '../../gateway/events.gateway';
 
 // ─── Standard select for list views ──────────────────────────
 
@@ -58,7 +59,10 @@ const requestDetailSelect = {
 export class HelpRequestsService {
   private readonly logger = new Logger(HelpRequestsService.name);
 
-  constructor(private readonly db: DatabaseService) {}
+  constructor(
+    private readonly db: DatabaseService,
+    private readonly gateway: EventsGateway,
+  ) {}
 
   // ──────────────────────────────────────────────────────────────
   //  CREATE — POST /api/requests
@@ -86,7 +90,7 @@ export class HelpRequestsService {
       where: {
         studentId,
         status: 'OPEN',
-        skills: { some: { skillId: input.skillId } },
+        skills: { some: { skillId: skill.id } },
       },
       select: { id: true },
     });
@@ -122,6 +126,7 @@ export class HelpRequestsService {
     });
 
     this.logger.log(`Help request created: ${request.id} by student ${studentId}`);
+    this.gateway.notifyNewHelpRequest(request);
     return request;
   }
 

@@ -1,13 +1,21 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { FeedbacksService } from './feedbacks.service';
 import { DatabaseService } from '../../database/database.service';
+import { EventsGateway } from '../../gateway/events.gateway';
 import { NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 
 describe('FeedbacksService', () => {
   let service: FeedbacksService;
   let mockDb: any;
+  let mockGateway: any;
 
   beforeEach(async () => {
+    mockGateway = {
+      notifySessionCompleted: jest.fn(),
+      notifyNewHelpRequest: jest.fn(),
+      notifyRequestAccepted: jest.fn(),
+    };
+
     mockDb = {
       session: {
         findUnique: jest.fn(),
@@ -20,7 +28,7 @@ describe('FeedbacksService', () => {
       helpRequest: {
         update: jest.fn(),
       },
-      $transaction: jest.fn().mockImplementation((callback) => callback(mockDb)),
+      $transaction: jest.fn().mockImplementation((callback: any) => callback(mockDb)),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -29,6 +37,10 @@ describe('FeedbacksService', () => {
         {
           provide: DatabaseService,
           useValue: mockDb,
+        },
+        {
+          provide: EventsGateway,
+          useValue: mockGateway,
         },
       ],
     }).compile();

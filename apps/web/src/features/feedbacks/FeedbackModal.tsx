@@ -36,18 +36,31 @@ export function FeedbackModal({
   const [serverError, setServerError] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
 
-  // Determinar a quién se califica (el compañero de la sesión, no el usuario actual)
-  const currentUser = typeof window !== 'undefined'
-    ? (() => {
-        try {
-          return JSON.parse(localStorage.getItem('codepair_user') || '{}');
-        } catch {
-          return {};
-        }
-      })()
-    : {};
+  const [currentUserId, setCurrentUserId] = useState<string | null>(() => {
+    if (typeof window === 'undefined') return null;
+    try {
+      const u = JSON.parse(localStorage.getItem('codepair_user') || '{}');
+      return u?.id || null;
+    } catch {
+      return null;
+    }
+  });
 
-  const isCurrentUserHost = Boolean(currentUser?.id && session?.hostId === currentUser.id);
+  React.useEffect(() => {
+    if (!currentUserId && isOpen) {
+      apiClient.get('/auth/me')
+        .then((res) => {
+          const user = res.data?.data || res.data;
+          if (user?.id) {
+            setCurrentUserId(user.id);
+            localStorage.setItem('codepair_user', JSON.stringify(user));
+          }
+        })
+        .catch(() => {});
+    }
+  }, [currentUserId, isOpen]);
+
+  const isCurrentUserHost = Boolean(currentUserId && session?.hostId === currentUserId);
   const reviewee = isCurrentUserHost
     ? (session?.participant || session?.host)
     : (session?.host || session?.participant);

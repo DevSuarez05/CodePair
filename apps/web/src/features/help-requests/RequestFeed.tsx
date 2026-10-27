@@ -13,6 +13,8 @@ import { RequestCard } from './RequestCard';
 import { FeedFilters, FeedFilterState } from './FeedFilters';
 import { RequestCardSkeleton } from '@/components/ui/Skeleton';
 import apiClient from '@/lib/api-client';
+import { useSocketFeed } from '@/hooks/useSocketEvents';
+import { toast } from 'sonner';
 import type { HelpRequest } from '@/types/api.types';
 
 export interface RequestFeedProps {
@@ -269,14 +271,40 @@ export function RequestFeed({
     });
   }, [requests, filters]);
 
+  // Conexión WebSocket en tiempo real
+  const { isConnected: isRealtimeConnected } = useSocketFeed({
+    onNewRequest: (newReq) => {
+      toast.info(`⚡ Nueva solicitud en vivo: ${newReq.title}`);
+      setRequests((prev) => {
+        if (prev.some((r) => r.id === newReq.id)) return prev;
+        return [newReq, ...prev];
+      });
+    },
+    onRequestStatusUpdated: ({ requestId, status }) => {
+      setRequests((prev) =>
+        prev.map((r) => (r.id === requestId ? { ...r, status: status as any } : r)),
+      );
+    },
+  });
+
   return (
     <section className="w-full max-w-5xl mx-auto space-y-6">
       {/* Header del Feed */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-brand-500/30 bg-brand-950/40 px-3 py-1 text-xs font-medium text-brand-400 mb-1.5">
-            <Sparkles className="h-3.5 w-3.5" />
-            <span>Feed Global de Colaboración</span>
+          <div className="flex flex-wrap items-center gap-2 mb-1.5">
+            <div className="inline-flex items-center gap-2 rounded-full border border-brand-500/30 bg-brand-950/40 px-3 py-1 text-xs font-medium text-brand-400">
+              <Sparkles className="h-3.5 w-3.5" />
+              <span>Feed Global de Colaboración</span>
+            </div>
+            <div className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-mono border ${
+              isRealtimeConnected
+                ? 'border-emerald-500/30 bg-emerald-950/40 text-emerald-400'
+                : 'border-slate-800 bg-surface-200 text-slate-400'
+            }`}>
+              <span className={`h-1.5 w-1.5 rounded-full ${isRealtimeConnected ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'}`} />
+              <span>{isRealtimeConnected ? 'Socket.IO Conectado' : 'Conectando Socket...'}</span>
+            </div>
           </div>
           <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
             Solicitudes de Pair Programming

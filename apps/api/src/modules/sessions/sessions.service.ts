@@ -8,6 +8,7 @@ import {
 import { Prisma } from '@prisma/client';
 import { v4 as uuidv4 } from 'uuid';
 import { DatabaseService } from '../../database/database.service';
+import { EventsGateway } from '../../gateway/events.gateway';
 
 // ─── Jitsi Meet URL generator ──────────────────────────────────
 
@@ -62,7 +63,10 @@ const sessionDetailSelect = {
 export class SessionsService {
   private readonly logger = new Logger(SessionsService.name);
 
-  constructor(private readonly db: DatabaseService) {}
+  constructor(
+    private readonly db: DatabaseService,
+    private readonly gateway: EventsGateway,
+  ) {}
 
   // ──────────────────────────────────────────────────────────────
   //  ACCEPT REQUEST — POST /api/requests/:id/accept
@@ -200,6 +204,8 @@ export class SessionsService {
       `Request ${requestId} accepted by mentor ${mentorId}. ` +
       `Session: ${session.id} | Room: ${session.roomCode} | Meet: ${session.meetLink}`,
     );
+
+    this.gateway.notifyRequestAccepted(requestId, session);
 
     return session;
   }

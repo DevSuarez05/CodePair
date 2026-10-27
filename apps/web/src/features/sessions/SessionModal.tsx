@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Video,
   Copy,
@@ -14,6 +14,8 @@ import {
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { useSocketSession } from '@/hooks/useSocketEvents';
+import { toast } from 'sonner';
 import type { Session, HelpRequest } from '@/types/api.types';
 
 export interface SessionModalProps {
@@ -34,6 +36,22 @@ export function SessionModal({
   const [copied, setCopied] = useState(false);
   const [showEmbeddedVideo, setShowEmbeddedVideo] = useState(false);
   const [isFullScreen, setIsFullScreen] = useState(false);
+
+  const { isPeerConnected, isCompleted } = useSocketSession(session?.id);
+
+  useEffect(() => {
+    if (isPeerConnected) {
+      toast.success('¡Tu compañero se ha conectado a la sala de Pair Programming!');
+    }
+  }, [isPeerConnected]);
+
+  useEffect(() => {
+    if (isCompleted && session && onCompleteAndReview) {
+      toast.info('La sesión ha sido concluida. ¡Es hora de calificar!');
+      onClose();
+      onCompleteAndReview(session);
+    }
+  }, [isCompleted, session, onCompleteAndReview, onClose]);
 
   if (!session) return null;
 
@@ -77,6 +95,13 @@ export function SessionModal({
                 <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
               </span>
               <span>Sala Generada Exitosamente</span>
+              <span className={`text-[11px] font-mono px-2 py-0.5 rounded-full border ${
+                isPeerConnected
+                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                  : 'bg-slate-800 text-slate-400 border-slate-700'
+              }`}>
+                {isPeerConnected ? '● Compañero en vivo' : '○ Esperando compañero...'}
+              </span>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-xs text-slate-400 font-mono">Código de sala:</span>

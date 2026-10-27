@@ -4,6 +4,9 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from 'sonner';
 
+import Link from 'next/link';
+import { NavbarAuth } from '@/components/layout/NavbarAuth';
+
 export const metadata: Metadata = {
   title: 'CodePair - Plataforma de Pair Programming Colaborativo',
   description:
@@ -28,23 +31,24 @@ export default function RootLayout({
       <body className="min-h-screen bg-surface-300 text-slate-100 antialiased selection:bg-brand-500 selection:text-white">
         <header className="sticky top-0 z-40 w-full border-b border-slate-800/80 bg-surface-200/80 backdrop-blur-xl">
           <div className="max-w-7xl mx-auto flex h-16 items-center justify-between px-4 sm:px-6">
-            <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-brand-600 to-accent-cyan shadow-lg shadow-brand-500/20">
+            <Link href="/" className="flex items-center gap-3 group">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-brand-600 to-accent-cyan shadow-lg shadow-brand-500/20 group-hover:scale-105 transition-transform">
                 <span className="font-mono font-black text-white text-base">CP</span>
               </div>
               <div>
-                <span className="font-bold text-lg text-white tracking-tight">CodePair</span>
+                <span className="font-bold text-lg text-white tracking-tight group-hover:text-brand-300 transition-colors">CodePair</span>
                 <span className="hidden sm:inline-block ml-2 text-[10px] font-mono px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-400 border border-brand-500/20">
                   v1.0 Developer Preview
                 </span>
               </div>
-            </div>
+            </Link>
 
             <div className="flex items-center gap-4 text-xs">
-              <span className="hidden md:inline-flex items-center gap-1.5 text-slate-400">
+              <span className="hidden md:inline-flex items-center gap-1.5 text-slate-400 mr-2">
                 <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
                 Comunidad activa
               </span>
+              <NavbarAuth />
             </div>
           </div>
         </header>

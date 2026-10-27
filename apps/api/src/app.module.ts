@@ -11,6 +11,7 @@ import { HelpRequestsModule } from './modules/help-requests/help-requests.module
 import { SessionsModule } from './modules/sessions/sessions.module';
 import { FeedbacksModule } from './modules/feedbacks/feedbacks.module';
 import { SkillsModule } from './modules/skills/skills.module';
+import { GatewayModule } from './gateway/gateway.module';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { SkillsModule } from './modules/skills/skills.module';
     SessionsModule,     // POST /requests/:id/accept, GET /sessions, GET /sessions/:id
     FeedbacksModule,    // POST /sessions/:id/feedback, GET /sessions/:id/feedback
     SkillsModule,       // GET /skills, GET /skills/:id
+    GatewayModule,      // WebSocket realtime events & rooms
   ],
 })
 export class AppModule {}
